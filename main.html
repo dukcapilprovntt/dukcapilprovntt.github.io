@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Kependudukan dengan Google Sheets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-full font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-blue-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-2">
+                     <img src="https://nttprov.go.id/img/ntt-min.png" alt="Logo Pemprov NTT" class="w-16 h-16 object-contain">
+                    
+                    	<h2 class="text-2xl font-bold text-gray-800 leading-tight">
+  				Dinas Kependudukan dan Pencatatan Sipil<br>
+ 				 <span class="text-1xl text-gray-600">Provinsi Nusa Tenggara Timur</span>
+			</h2>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="fade-in">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+                <!-- Total Penduduk -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Penduduk</p>
+                            <p id="totalPenduduk" class="text-3xl font-bold text-blue-600">-</p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gender Distribution Pie Chart -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover xl:col-span-2">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Distribusi Gender</h3>
+                    <div class="relative h-48">
+                        <canvas id="genderPieChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Laki-laki -->
+              <!--   <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Laki-Laki</p>
+                            <p id="totalLaki" class="text-3xl font-bold text-green-600">-</p>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div> -->
+
+                <!-- Perempuan -->
+              <!--   <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Perempuan</p>
+                            <p id="totalPerempuan" class="text-3xl font-bold text-pink-600">-</p>
+                        </div>
+                        <div class="bg-pink-100 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div> -->
+
+                <!-- Wajib Perekaman KTP-el -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Wajib Perekaman KTP-el</p>
+                            <p id="totalWajibRekam" class="text-3xl font-bold text-emerald-600">-</p>
+                        </div>
+                        <div class="bg-emerald-100 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- sudahRekam -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Sudah Perekaman KTP-el</p>
+                            <p id="totalSudahRekam" class="text-3xl font-bold text-emerald-600">-</p>
+                        </div>
+                        <div class="bg-emerald-100 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Belum Rekam -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Belum Perekaman KTP-el</p>
+                            <p id="totalBelumRekam" class="text-3xl font-bold text-orange-600">-</p>
+                        </div>
+                        <div class="bg-orange-100 p-3 rounded-full">
+                            <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wajib Memiliki Akta Kelahiran -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Wajib Akta Kelahiran 0-4 tahun</p>
+                            <p id="totalWajibAkta" class="text-3xl font-bold text-red-600">-</p>
+                        </div>
+                        <div class="bg-red-100 p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 3h8l4 4v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Memiliki Akta Kelahiran -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Akta Kelahiran 0 - 4 Tahun</p>
+                            <p id="totalAktaAda" class="text-3xl font-bold text-orange-600">-</p>
+                        </div>
+                        <div class="bg-orange-100 p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 3h8l4 4v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aktivasi IKD -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Aktivasi IKD</p>
+                            <p id="totalIKD" class="text-3xl font-bold text-blue-500">-</p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <!-- Bentuk smartphone -->
+                                 <rect x="7" y="2" width="10" height="20" rx="2" ry="2" stroke-width="2"/>
+                                <!-- Tombol home -->
+                                <circle cx="12" cy="19" r="0.8" fill="currentColor"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- wajib memiliki kia  -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Wajib Memiliki KIA </p>
+                            <p id="totalWajibKia" class="text-3xl font-bold text-pink-500">-</p>
+                        </div>
+                        <div class="bg-pink-100 p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <rect width="18" height="12" x="3" y="6" rx="2" ry="2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 10h5m-5 4h3"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- kepemilikan kia Ada  -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Memiliki KIA </p>
+                            <p id="totalKiaAda" class="text-3xl font-bold text-pink-500">-</p>
+                        </div>
+                        <div class="bg-pink-100 p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <rect width="18" height="12" x="3" y="6" rx="2" ry="2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 10h5m-5 4h3"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Belum Memiliki KIA  -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Belum Memiliki KIA </p>
+                            <p id="totalKiaTidak" class="text-3xl font-bold text-red-500">-</p>
+                        </div>
+                        <div class="bg-red-100 p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <rect width="18" height="12" x="3" y="6" rx="2" ry="2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 10h5m-5 4h3"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Akta Kematian  -->
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Akta Kematian </p>
+                            <p id="totalAktaKematian" class="text-3xl font-bold text-black-500">-</p>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <!-- Bentuk dokumen -->
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M7 2h8l5 5v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+                                <!-- Simbol salib -->
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M12 9v5m-2.5-2.5h5" />
+                                <!-- Tulisan RIP (font Aptos) -->
+                                <text x="12" y="20" text-anchor="middle" font-size="5" fill="black" font-family="Aptos, Arial, sans-serif" font-weight="600">R I P</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                
+                
+                
+            </div>
+            
+
+            <!-- Connection Status -->
+            <div id="connectionStatus" class="mb-6 p-4 rounded-lg border hidden">
+                <div class="flex items-center space-x-2">
+                    <div id="statusIcon"></div>
+                    <span id="statusText"></span>
+                </div>
+            </div>
+
+
+
+            <!-- Debug Info (Only visible when logged in) -->
+            <div id="debugInfo" class="hidden mb-6 p-4 rounded-lg bg-gray-100 border text-sm">
+                <h4 class="font-semibold mb-2">Debug Information:</h4>
+                <div id="debugContent">
+                    <p><strong>Google Apps Script URL:</strong> <span class="text-blue-600">https://script.google.com/macros/s/AKfycbzzRbb47oa7PvrBiJ5ErvZxEgA0iBohWMt5Aauz93QFJSlSi5ErzMMvaXVXK1XABR-S/exec</span></p>
+                    <p><strong>Status:</strong> <span id="debugStatus">Menunggu test koneksi...</span></p>
+                    <p><strong>Last Error:</strong> <span id="debugError">-</span></p>
+                </div>
+            </div>
+
+            <!-- Data Wilayah Table -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-gray-800" id="tableTitle">Tabel Rekapitulasi Kependudukan Provinsi Nusa Tenggara Timur Keadaan <span id="lastMonthDate"></span></h3>
+                    <div id="adminControls" class="hidden flex space-x-2">
+                        <button id="testConnection" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            <span>Test Koneksi</span>
+                        </button>
+                        <button id="refreshData" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Wilayah</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kode Wilayah</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Penduduk</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Laki-laki</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Perempuan</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wajib Perekaman KTP-el</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sudah Perekaman KTP-el</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Belum Perekaman KTP-el</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wajib Memiliki Akta Kelahiran (0-4 tahun)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Memiliki Akta Kelahiran (0-4 tahun)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Belum Akta Kelahiran (0-4 tahun)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktivasi IKD</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wajib Memiliki KIA </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Memiliki KIA </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Belum Memiliki KIA </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Akta Kematian </th>
+                            </tr>
+                        </thead>
+                        <tbody id="sheetsDataTable" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                    <div class="loading mx-auto"></div>
+                                    <p class="mt-2">Memuat data dari Google Sheets...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Management View -->
+        <div id="adminView" class="hidden fade-in">
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Manajemen Data Kependudukan</h2>
+                    <div class="flex space-x-4">
+                        <button id="backToDashboard" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            Kembali ke Dashboard
+                        </button>
+                        <button id="addDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            Tambah Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CRUD Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Wilayah</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kode Wilayah</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Penduduk</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Laki-laki</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Perempuan</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SudahRekam</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTable" class="bg-white divide-y divide-gray-200">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+
+
+    <!-- Add/Edit Data Modal -->
+    <div id="dataModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 max-w-lg w-full mx-4 max-h-full overflow-y-auto">
+            <h2 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-6 text-center">Tambah Data Wilayah</h2>
+            <form id="dataForm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Nama Wilayah</label>
+                        <input type="text" id="dataWilayah" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Kode Wilayah</label>
+                        <input type="text" id="dataKode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Total Penduduk</label>
+                        <input type="number" id="dataTotalPenduduk" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Penduduk Laki-laki</label>
+                        <input type="number" id="dataLaki" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Penduduk Perempuan</label>
+                        <input type="number" id="dataPerempuan" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">SudahRekam</label>
+                        <input type="number" id="dataSudahRekam" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Belum Rekam</label>
+                        <input type="number" id="dataBelumRekam" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Memiliki Akta Kelahiran</label>
+                        <input type="number" id="dataAktaAda" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Belum Memiliki Akta Kelahiran</label>
+                        <input type="number" id="dataAktaTidak" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Aktivasi IKD</label>
+                        <input type="number" id="dataIKD" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Memiliki KiaAda </label>
+                        <input type="number" id="dataKiaAda " class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                </div>
+                <div class="flex space-x-4 mt-6">
+                    <button type="button" id="cancelData" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
+                        <span id="saveButtonText">Simpan</span>
+                        <div id="saveButtonLoading" class="loading hidden ml-2"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Google Apps Script Integration -->
+    <script>
+        // Configuration - URL Google Apps Script Web App Anda
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzRbb47oa7PvrBiJ5ErvZxEgA0iBohWMt5Aauz93QFJSlSi5ErzMMvaXVXK1XABR-S/exec';
+        const SPREADSHEET_ID = '1UsNzFwZwnQ5Bg3FTWHI2zRwdoO8101CC3LA3DmNMSEA';
+        
+        // Global variables
+        let isLoggedIn = false;
+        let currentEditId = null;
+        let populationData = [];
+
+        // Update debug info
+        function updateDebugInfo(status, error = null) {
+            document.getElementById('debugStatus').textContent = status;
+            document.getElementById('debugError').textContent = error || '-';
+        }
+
+        // Show connection status
+        function showConnectionStatus(isConnected, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            
+            statusDiv.classList.remove('hidden');
+            
+            if (isConnected) {
+                statusDiv.className = 'mb-6 p-4 rounded-lg border bg-green-50 border-green-200';
+                statusIcon.innerHTML = '<svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                statusText.innerHTML = `<span class="text-green-800 font-medium">✅ ${message}</span>`;
+                updateDebugInfo('Terhubung', null);
+            } else {
+                statusDiv.className = 'mb-6 p-4 rounded-lg border bg-red-50 border-red-200';
+                statusIcon.innerHTML = '<svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                statusText.innerHTML = `<span class="text-red-800 font-medium">❌ ${message}</span>`;
+                updateDebugInfo('Gagal terhubung', message);
+            }
+        }
+
+        // Test connection to Google Apps Script
+        async function testConnection() {
+            try {
+                console.log('🔍 Testing connection to Google Apps Script...');
+                updateDebugInfo('Testing koneksi...', null);
+                
+                // Test dengan GET request dulu
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+                
+                console.log('📡 Response status:', response.status);
+                console.log('📡 Response ok:', response.ok);
+                
+                if (response.ok) {
+                    const responseText = await response.text();
+                    console.log('📄 Response text:', responseText);
+                    
+                    try {
+                        const jsonResponse = JSON.parse(responseText);
+                        console.log('✅ JSON parsed successfully:', jsonResponse);
+                        
+                        if (jsonResponse.success) {
+                            showConnectionStatus(true, 'Koneksi berhasil! Google Apps Script aktif');
+                            return true;
+                        } else {
+                            showConnectionStatus(false, 'Google Apps Script merespons tapi ada error: ' + jsonResponse.message);
+                            return false;
+                        }
+                    } catch (parseError) {
+                        console.error('❌ JSON parse error:', parseError);
+                        showConnectionStatus(false, 'Response bukan JSON valid: ' + responseText.substring(0, 100));
+                        return false;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('❌ Connection test failed:', error);
+                
+                let errorMessage = 'Koneksi gagal: ';
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage += 'Tidak dapat mengakses Google Apps Script. Cek koneksi internet atau URL.';
+                } else if (error.message.includes('CORS')) {
+                    errorMessage += 'CORS error - pastikan script di-deploy dengan akses "Anyone"';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                showConnectionStatus(false, errorMessage);
+                return false;
+            }
+        }
+
+        // Google Sheets API Functions
+        class GoogleSheetsAPI {
+            static async makeRequest(action, data = {}) {
+                try {
+                    console.log('📤 Making request to:', GOOGLE_SCRIPT_URL);
+                    console.log('📤 Action:', action);
+                    console.log('📤 Data:', data);
+                    
+                    const requestOptions = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain',
+                        },
+                        body: JSON.stringify({
+                            action: action,
+                            data: data
+                        }),
+                        redirect: 'follow'
+                    };
+                    
+                    const response = await fetch(GOOGLE_SCRIPT_URL, requestOptions);
+                    
+                    console.log('📥 Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const responseText = await response.text();
+                    console.log('📄 Raw response:', responseText);
+                    
+                    let result;
+                    try {
+                        result = JSON.parse(responseText);
+                    } catch (parseError) {
+                        console.error('❌ JSON parse error:', parseError);
+                        throw new Error('Invalid JSON response: ' + responseText.substring(0, 100));
+                    }
+                    
+                    console.log('✅ Parsed response:', result);
+                    return result;
+                } catch (error) {
+                    console.error('❌ API request error:', error);
+                    throw error;
+                }
+            }
+
+            // CREATE - Tambah data baru
+            static async createData(rowData) {
+                return await this.makeRequest('create', rowData);
+            }
+
+            // READ - Ambil semua data
+            static async readData() {
+                return await this.makeRequest('read');
+            }
+
+            // UPDATE - Update data berdasarkan ID
+            static async updateData(id, rowData) {
+                return await this.makeRequest('update', { id: id, ...rowData });
+            }
+
+            // DELETE - Hapus data berdasarkan ID
+            static async deleteData(id) {
+                return await this.makeRequest('delete', { id: id });
+            }
+
+            // GET STATS - Ambil statistik
+            static async getStats() {
+                return await this.makeRequest('stats');
+            }
+        }
+
+        // Load data from Google Sheets
+        async function loadDataFromSheets() {
+            try {
+                console.log('📊 Loading data from Google Sheets...');
+                updateDebugInfo('Memuat data...', null);
+                
+                const result = await GoogleSheetsAPI.readData();
+                
+                if (result.success) {
+                    populationData = result.data || [];
+                    renderSheetsDataTable();
+                    updateStats();
+                    showConnectionStatus(true, `Data berhasil dimuat (${populationData.length} records)`);
+                } else {
+                    showError('Gagal memuat data: ' + (result.message || 'Unknown error'));
+                    showConnectionStatus(false, result.message || 'Unknown error');
+                }
+            } catch (error) {
+                console.error('❌ Load data error:', error);
+                showError('Error loading data: ' + error.message);
+                showConnectionStatus(false, error.message);
+            }
+        }
+
+        // Chart untuk distribusi gender
+        let genderPieChart = null;
+
+        function initGenderPieChart() {
+          const el = document.getElementById('genderPieChart');
+          if (!el) return;
+          const ctx = el.getContext('2d');
+          // register plugin jika tersedia
+          if (window.Chart && window.ChartDataLabels) {
+            try { Chart.register(ChartDataLabels); } catch(e) { /* ignore */ }
+          }
+
+          genderPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+              labels: ['Laki-Laki', 'Perempuan'],
+              datasets: [{
+                data: [0, 0],
+                backgroundColor: ['#16a34a', '#ec4899'],
+                borderColor: ['#ffffff', '#ffffff'],
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      const v = Number(context.raw) || 0;
+                      const sum = context.dataset.data.reduce((a,b) => a + (Number(b)||0), 0);
+                      const pct = sum ? ((v / sum) * 100).toFixed(2).replace('.', ',') + '%' : '0%';
+                      return `${context.label}: ${v.toLocaleString()} (${pct})`;
+                    }
+                  }
+                },
+                // konfigurasi datalabels untuk menampilkan angka + persen pada slice
+                datalabels: {
+                  color: '#fff',
+                  formatter: function(value, ctx) {
+                    const v = Number(value) || 0;
+                    const data = ctx.chart.data.datasets[0].data;
+                    const sum = data.reduce((a,b) => a + (Number(b)||0), 0);
+                    const pct = sum ? ((v / sum) * 100).toFixed(1).replace('.', ',') + '%' : '0%';
+                    // tampilkan dua baris: angka (format lokal) dan persen
+                    return v.toLocaleString() + '\n' + pct;
+                  },
+                  font: {
+                    weight: '600',
+                    size: 12
+                  },
+                  textAlign: 'center',
+                  clamp: true,
+                  offset: 4
+                }
+              }
+            }
+          });
+         }
+
+        function renderGenderChart(male, female) {
+          const m = Number(male) || 0;
+          const f = Number(female) || 0;
+          if (!genderPieChart) {
+            initGenderPieChart();
+          }
+          if (!genderPieChart) return;
+          genderPieChart.data.datasets[0].data = [m, f];
+          genderPieChart.update();
+        }
+        
+        async function updateStats() {
+          try {
+            const result = await GoogleSheetsAPI.getStats();
+            if (result.success) {
+              const stats = result.data;
+
+              // update chart gender
+              renderGenderChart(stats.totalLaki || 0, stats.totalPerempuan || 0);
+
+              document.getElementById('totalPenduduk').textContent = stats.totalPenduduk.toLocaleString();
+              
+              // Laki-Laki dengan 2 desimal dan teks konteks
+              const pctLakiText = (stats.totalPenduduk && stats.totalPenduduk > 0)
+                ? formatPercent(stats.totalLaki, stats.totalPenduduk, 'dari total penduduk')
+                : '-';
+              setWithPct('totalLaki', stats.totalLaki, pctLakiText);
+
+              // Perempuan
+              const pctPerempuanText = (stats.totalPenduduk && stats.totalPenduduk > 0)
+                ? formatPercent(stats.totalPerempuan, stats.totalPenduduk, 'dari total penduduk')
+                : '-';
+              setWithPct('totalPerempuan', stats.totalPerempuan, pctPerempuanText);
+
+              document.getElementById('totalWajibRekam').textContent = stats.wajibRekam.toLocaleString();
+              const pctSudahRekamText = (stats.wajibRekam && stats.wajibRekam > 0)
+                ? formatPercent(stats.sudahRekam, stats.wajibRekam, 'dari wajib perekaman KTP-el')
+                : '-';
+              setWithPct('totalSudahRekam', stats.sudahRekam, pctSudahRekamText);
+
+              document.getElementById('totalBelumRekam').textContent = stats.belumRekam.toLocaleString();
+
+              // Akta 0-4 tahun (jika tersedia)
+              if (stats.akta0_4 !== undefined && stats.wajibAkta0_4 !== undefined) {
+                const pctAkta0_4Text = (stats.wajibAkta0_4 && stats.wajibAkta0_4 > 0)
+                  ? formatPercent(stats.akta0_4, stats.wajibAkta0_4, 'dari wajib akta 0-4 tahun')
+                  : '-';
+                setWithPct('totalAktaAda', stats.akta0_4, pctAkta0_4Text);
+                document.getElementById('totalWajibAkta').textContent = stats.wajibAkta0_4.toLocaleString();
+              } else {
+                document.getElementById('totalAktaAda').textContent = stats.aktaAda.toLocaleString();
+              }
+
+              document.getElementById('totalAktaTidak').textContent = stats.aktaTidak.toLocaleString();
+              document.getElementById('totalIKD').textContent = stats.ikd.toLocaleString();
+              document.getElementById('totalWajibKia').textContent = stats.wajibKia.toLocaleString();
+
+              const pctKiaText = (stats.wajibKia && stats.wajibKia > 0)
+                ? formatPercent(stats.kiaAda, stats.wajibKia, 'dari wajib memiliki KIA')
+                : '-';
+              setWithPct('totalKiaAda', stats.kiaAda, pctKiaText);
+
+              document.getElementById('totalKiaTidak').textContent = stats.kiaTidak.toLocaleString();
+              document.getElementById('totalAktaKematian').textContent = stats.aktaKematian.toLocaleString();
+
+            } else {
+              // fallback ke perhitungan lokal jika API stats gagal
+              calculateLocalStats();
+            }
+          } catch (error) {
+            console.error('Error updating stats:', error);
+            calculateLocalStats();
+          }
+        }
+
+        // cadangan: hitung dari data lokal (populationData)
+        function calculateLocalStats() {
+          let totalPenduduk = 0;
+          let totalLaki = 0;
+          let totalPerempuan = 0;
+          let wajibRekam = 0;
+          let sudahRekam = 0;
+          let belumRekam = 0;
+          let wajibAkta = 0;
+          let aktaAda = 0;
+          let aktaTidak = 0;
+          let ikd = 0;
+          let wajibKia = 0;
+          let kiaAda = 0;
+          let kiaTidak = 0;
+          let aktaKematian = 0;
+
+          const n = v => {
+            if (v === undefined || v === null) return 0;
+            const x = Number(v);
+            return isNaN(x) ? 0 : x;
+          };
+
+          populationData.forEach(w => {
+            totalPenduduk += n(w.totalPenduduk || w.total_penduduk);
+            totalLaki += n(w.pendudukLaki || w.laki);
+            totalPerempuan += n(w.pendudukPerempuan || w.perempuan);
+            wajibRekam += n(w.wajibRekam);
+            sudahRekam += n(w.sudahRekam);
+            belumRekam += n(w.belumRekam);
+            wajibAkta += n(w.wajibAkta);
+            aktaAda += n(w.aktaAda);
+            aktaTidak += n(w.aktaTidak);
+            ikd += n(w.ikd);
+            wajibKia += n(w.wajibKia);
+            kiaAda += n(w.kiaAda);
+            kiaTidak += n(w.kiaTidak);
+            aktaKematian += n(w.aktaKematian);
+          });
+
+          // Laki-Laki / Total Penduduk
+          const pctLakiText = (totalPenduduk > 0) ? formatPercent(totalLaki, totalPenduduk, 'dari total penduduk') : '-';
+          setWithPct('totalLaki', totalLaki, pctLakiText);
+
+          // Perempuan / Total Penduduk
+          const pctPerempuanText = (totalPenduduk > 0) ? formatPercent(totalPerempuan, totalPenduduk, 'dari total penduduk') : '-';
+          setWithPct('totalPerempuan', totalPerempuan, pctPerempuanText);
+
+          // Sudah Rekam / Wajib Ream
+          const pctSudahText = (wajibRekam > 0) ? formatPercent(sudahRekam, wajibRekam, 'dari wajib perekaman KTP-el') : '-';
+          setWithPct('totalSudahRekam', sudahRekam, pctSudahText);
+
+          // Akta 0-4 tahun (gunakan aktaAda/wajibAkta if those represent 0-4)
+          const pctAktaText = (wajibAkta > 0) ? formatPercent(aktaAda, wajibAkta, 'dari wajib akta 0-4 tahun') : '-';
+          setWithPct('totalAktaAda', aktaAda, pctAktaText);
+
+          // Memiliki KIA / Wajib Memiliki KIA
+          const pctKiaText = (wajibKia > 0) ? formatPercent(kiaAda, wajibKia, 'dari wajib memiliki KIA') : '-';
+          setWithPct('totalKiaAda', kiaAda, pctKiaText);
+
+          // other numeric cards
+          setWithPct('totalPenduduk', totalPenduduk, '-');
+          setWithPct('totalWajibRekam', wajibRekam, '-');
+          setWithPct('totalBelumRekam', belumRekam, '-');
+          setWithPct('totalWajibAkta', wajibAkta, '-');
+          setWithPct('totalIKD', ikd, '-');
+          setWithPct('totalWajibKia', wajibKia, '-');
+          setWithPct('totalKiaTidak', kiaTidak, '-');
+          setWithPct('totalAktaTidak', aktaTidak, '-');
+          setWithPct('totalAktaKematian', aktaKematian, '-');
+
+          if (typeof renderAktaKematianChart === 'function') renderAktaKematianChart();
+          // render pie chart dengan data lokal sebagai cadangan
+          if (typeof renderGenderChart === 'function') renderGenderChart(totalLaki, totalPerempuan);
+        }
+
+
+        // Render data table for dashboard view
+        function renderSheetsDataTable() {
+        const tbody = document.getElementById('sheetsDataTable');
+        tbody.innerHTML = '';
+
+        if (populationData.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="17" class="px-6 py-4 text-center text-gray-500">
+                📋 Tidak ada data tersedia. Pastikan Google Spreadsheet memiliki data dan header yang benar.
+                </td>
+            </tr>
+            `;
+            return;
+        }
+
+        populationData.forEach(wilayah => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            row.innerHTML = `
+            <td class="px-6 py-4 text-sm text-gray-900">${wilayah.id || '-'}</td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900">${wilayah.namaWilayah || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${wilayah.kodeWilayah || '-'}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.totalPenduduk || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.pendudukLaki || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.pendudukPerempuan || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.wajibRekam || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.sudahRekam || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.belumRekam || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.wajibAkta || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.aktaAda || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.aktaTidak || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.ikd || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.wajibKia || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.kiaAda || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.kiaTidak || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${(wilayah.aktaKematian || 0).toLocaleString()}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        }
+
+
+        // Render data table for admin view
+        function renderDataTable() {
+            const tbody = document.getElementById('dataTable');
+            tbody.innerHTML = '';
+
+            populationData.forEach(wilayah => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${wilayah.id || '-'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${wilayah.namaWilayah || '-'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${wilayah.kodeWilayah || '-'}</td>
+
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.totalPenduduk || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.pendudukLaki || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.pendudukPerempuan || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.wajibRekam || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.sudahRekam || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.belumRekam || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.wajibAkta || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.aktaAda || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.aktaTidak || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.ikd || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.wajibKia || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.kiaAda || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.kiaTidak || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(wilayah.aktaKematian || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="editData(${wilayah.id})" class="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
+                    <button onclick="deleteData(${wilayah.id})" class="text-red-600 hover:text-red-900">Hapus</button>
+                </td>
+                `;
+                tbody.appendChild(row);
+            });
+            }
+
+
+        // Helper: format persen dan tampilkan angka + keterangan kecil
+        function formatPercent(value, total, label = '') {
+          const v = Number(value) || 0;
+          const t = Number(total) || 0;
+          const pct = t ? ((v / t) * 100).toFixed(2).replace('.', ',') + '%' : '-';
+          return label ? `${v.toLocaleString()} (${pct}) ${label}` : `${v.toLocaleString()} (${pct})`;
+        }
+
+        function setWithPct(id, value, pctText = '-') {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const num = (value === undefined || value === null) ? 0 : (Number(value) || 0);
+          // tampilkan angka dan keterangan persen (jika ada)
+          if (pctText && pctText !== '-') {
+            el.innerHTML = `${num.toLocaleString()}<br><span class="text-xs text-gray-500">${pctText}</span>`;
+          } else {
+            el.textContent = num.toLocaleString();
+          }
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50 max-w-md';
+            errorDiv.innerHTML = `
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm">${message}</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.parentNode.removeChild(errorDiv);
+                }
+            }, 8000);
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 3000);
+        }
+
+        // View switching
+        function showAdminView() {
+            document.getElementById('dashboardView').classList.add('hidden');
+            document.getElementById('adminView').classList.remove('hidden');
+            renderDataTable();
+        }
+
+        function showDashboardView() {
+            document.getElementById('adminView').classList.add('hidden');
+            document.getElementById('dashboardView').classList.remove('hidden');
+        }
+
+        document.getElementById('backToDashboard').addEventListener('click', showDashboardView);
+
+        // Test connection button
+        document.getElementById('testConnection').addEventListener('click', function() {
+            testConnection();
+        });
+
+        // Refresh data button
+        document.getElementById('refreshData').addEventListener('click', function() {
+            loadDataFromSheets();
+        });
+
+        // Add data functionality
+        document.getElementById('addDataBtn').addEventListener('click', function() {
+            currentEditId = null;
+            document.getElementById('modalTitle').textContent = 'Tambah Data Wilayah';
+            document.getElementById('dataForm').reset();
+            document.getElementById('dataModal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelData').addEventListener('click', function() {
+            document.getElementById('dataModal').classList.add('hidden');
+        });
+
+        document.getElementById('dataForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Show loading
+            document.getElementById('saveButtonText').textContent = 'Menyimpan...';
+            document.getElementById('saveButtonLoading').classList.remove('hidden');
+            
+            const formData = {
+                namaWilayah: document.getElementById('dataWilayah').value,
+                kodeWilayah: document.getElementById('dataKode').value,
+                totalPenduduk: parseInt(document.getElementById('dataTotalPenduduk').value) || 0,
+                pendudukLaki: parseInt(document.getElementById('dataLaki').value) || 0,
+                pendudukPerempuan: parseInt(document.getElementById('dataPerempuan').value) || 0,
+                sudahRekam: parseInt(document.getElementById('dataSudahRekam').value) || 0,
+                belumRekam: parseInt(document.getElementById('dataBelumRekam').value) || 0,
+                aktaAda: parseInt(document.getElementById('dataAktaAda').value) || 0,
+                aktaTidak: parseInt(document.getElementById('dataAktaTidak').value) || 0,
+                ikd: parseInt(document.getElementById('dataIKD').value) || 0,
+                kiaAda : parseInt(document.getElementById('dataKiaAda ').value) || 0
+            };
+
+            try {
+                let result;
+                if (currentEditId) {
+                    // Update existing data
+                    result = await GoogleSheetsAPI.updateData(currentEditId, formData);
+                } else {
+                    // Add new data
+                    result = await GoogleSheetsAPI.createData(formData);
+                }
+
+                if (result.success) {
+                    showSuccess(currentEditId ? 'Data berhasil diupdate!' : 'Data berhasil ditambahkan!');
+                    document.getElementById('dataModal').classList.add('hidden');
+                    await loadDataFromSheets(); // Reload data
+                    renderDataTable();
+                } else {
+                    showError('Gagal menyimpan data: ' + result.message);
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                // Hide loading
+                document.getElementById('saveButtonText').textContent = 'Simpan';
+                document.getElementById('saveButtonLoading').classList.add('hidden');
+            }
+        });
+
+        // Edit data function
+        function editData(id) {
+            const wilayah = populationData.find(w => w.id == id);
+            if (wilayah) {
+                currentEditId = id;
+                document.getElementById('modalTitle').textContent = 'Edit Data Wilayah';
+                document.getElementById('dataWilayah').value = wilayah.namaWilayah || '';
+                document.getElementById('dataKode').value = wilayah.kodeWilayah || '';
+                document.getElementById('dataTotalPenduduk').value = wilayah.totalPenduduk || 0;
+                document.getElementById('dataLaki').value = wilayah.pendudukLaki || 0;
+                document.getElementById('dataPerempuan').value = wilayah.pendudukPerempuan || 0;
+                document.getElementById('dataWajibRekam').value = wilayah.wajibRekam || 0;
+                document.getElementById('dataSudahRekam').value = wilayah.sudahRekam || 0;
+                document.getElementById('dataBelumRekam').value = wilayah.belumRekam || 0;
+                document.getElementById('dataWajibAkta').value = wilayah.wajibAkta || 0;
+                document.getElementById('dataAktaAda').value = wilayah.aktaAda || 0;
+                document.getElementById('dataAktaTidak').value = wilayah.aktaTidak || 0;
+                document.getElementById('dataIKD').value = wilayah.ikd || 0;
+                document.getElementById('dataWajibKia').value = wilayah.wajibKia || 0;
+                document.getElementById('dataKiaAda').value = wilayah.kiaAda || 0;
+                document.getElementById('dataKiaTidak').value = wilayah.kiaTidak || 0;
+                document.getElementById('dataAktaKematian').value = wilayah.aktaKematian || 0;
+                document.getElementById('dataModal').classList.remove('hidden');
+            }
+            }
+
+
+        // Delete data function
+        function deleteData(id) {
+            // Create custom confirmation modal
+            const confirmModal = document.createElement('div');
+            confirmModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            confirmModal.innerHTML = `
+                <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Konfirmasi Hapus</h3>
+                    <p class="text-gray-600 mb-6">Apakah Anda yakin ingin menghapus data ini?</p>
+                    <div class="flex space-x-4">
+                        <button id="cancelDelete" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors">
+                            Batal
+                        </button>
+                        <button id="confirmDelete" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors">
+                            <span id="deleteButtonText">Hapus</span>
+                            <div id="deleteButtonLoading" class="loading hidden ml-2"></div>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(confirmModal);
+            
+            document.getElementById('cancelDelete').addEventListener('click', function() {
+                document.body.removeChild(confirmModal);
+            });
+            
+            document.getElementById('confirmDelete').addEventListener('click', async function() {
+                // Show loading
+                document.getElementById('deleteButtonText').textContent = 'Menghapus...';
+                document.getElementById('deleteButtonLoading').classList.remove('hidden');
+                
+                try {
+                    const result = await GoogleSheetsAPI.deleteData(id);
+                    if (result.success) {
+                        showSuccess('Data berhasil dihapus!');
+                        await loadDataFromSheets(); // Reload data
+                        renderDataTable();
+                    } else {
+                        showError('Gagal menghapus data: ' + result.message);
+                    }
+                } catch (error) {
+                    showError('Error: ' + error.message);
+                } finally {
+                    document.body.removeChild(confirmModal);
+                }
+            });
+        }
+
+        // Dapatkan tanggal terakhir dari bulan sebelumnya
+function getLastMonthDate() {
+  const now = new Date();
+  // buat tanggal dengan hari = 0 → hasilnya tanggal terakhir dari bulan sebelumnya
+  const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  // format tanggal ke "DD NamaBulan YYYY" (contoh: "30 September 2025")
+  const months = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+
+  const day = lastDayPrevMonth.getDate();
+  const month = months[lastDayPrevMonth.getMonth()];
+  const year = lastDayPrevMonth.getFullYear();
+
+  return `${day} ${month} ${year}`;
+}
+
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Dashboard initialized');
+            console.log('🔗 Google Script URL:', GOOGLE_SCRIPT_URL);
+            updateDebugInfo('Aplikasi dimuat', null);
+            
+            // init chart (kanvas harus ada di DOM)
+            initGenderPieChart();
+            
+            // Set last month date in table title
+            document.getElementById('lastMonthDate').textContent = getLastMonthDate();
+            
+            // Load data immediately for public view
+            testConnection().then(success => {
+                if (success) {
+                    loadDataFromSheets();
+                } else {
+                    // Show message if connection fails
+                    const tbody = document.getElementById('sheetsDataTable');
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                ⚠️ Tidak dapat terhubung ke Google Sheets. Silakan coba lagi nanti.
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+        });
+    </script>
+
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98eb93151460548b',t:'MTc2MDQ5MjA3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
