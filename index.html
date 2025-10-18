@@ -751,19 +751,19 @@
               
               // Laki-Laki dengan 2 desimal dan teks konteks
               const pctLakiText = (stats.totalPenduduk && stats.totalPenduduk > 0)
-                ? formatPercent(stats.totalLaki, stats.totalPenduduk, 'dari total penduduk')
+                ? formatPercentOnly(stats.totalLaki, stats.totalPenduduk, 'dari total penduduk')
                 : '-';
               setWithPct('totalLaki', stats.totalLaki, pctLakiText);
 
               // Perempuan
               const pctPerempuanText = (stats.totalPenduduk && stats.totalPenduduk > 0)
-                ? formatPercent(stats.totalPerempuan, stats.totalPenduduk, 'dari total penduduk')
+                ? formatPercentOnly(stats.totalPerempuan, stats.totalPenduduk, 'dari total penduduk')
                 : '-';
               setWithPct('totalPerempuan', stats.totalPerempuan, pctPerempuanText);
 
               document.getElementById('totalWajibRekam').textContent = stats.wajibRekam.toLocaleString();
               const pctSudahRekamText = (stats.wajibRekam && stats.wajibRekam > 0)
-                ? formatPercent(stats.sudahRekam, stats.wajibRekam, 'dari wajib perekaman KTP-el')
+                ? formatPercentOnly(stats.sudahRekam, stats.wajibRekam, 'dari wajib perekaman KTP-el')
                 : '-';
               setWithPct('totalSudahRekam', stats.sudahRekam, pctSudahRekamText);
 
@@ -772,7 +772,7 @@
               // Akta 0-4 tahun (jika tersedia)
               if (stats.akta0_4 !== undefined && stats.wajibAkta0_4 !== undefined) {
                 const pctAkta0_4Text = (stats.wajibAkta0_4 && stats.wajibAkta0_4 > 0)
-                  ? formatPercent(stats.akta0_4, stats.wajibAkta0_4, 'dari wajib akta 0-4 tahun')
+                  ? formatPercentOnly(stats.akta0_4, stats.wajibAkta0_4, 'dari wajib akta 0-4 tahun')
                   : '-';
                 setWithPct('totalAktaAda', stats.akta0_4, pctAkta0_4Text);
                 document.getElementById('totalWajibAkta').textContent = stats.wajibAkta0_4.toLocaleString();
@@ -785,7 +785,7 @@
               document.getElementById('totalWajibKia').textContent = stats.wajibKia.toLocaleString();
 
               const pctKiaText = (stats.wajibKia && stats.wajibKia > 0)
-                ? formatPercent(stats.kiaAda, stats.wajibKia, 'dari wajib memiliki KIA')
+                ? formatPercentOnly(stats.kiaAda, stats.wajibKia, 'dari wajib memiliki KIA')
                 : '-';
               setWithPct('totalKiaAda', stats.kiaAda, pctKiaText);
 
@@ -843,23 +843,23 @@
           });
 
           // Laki-Laki / Total Penduduk
-          const pctLakiText = (totalPenduduk > 0) ? formatPercent(totalLaki, totalPenduduk, 'dari total penduduk') : '-';
+          const pctLakiText = (totalPenduduk > 0) ? formatPercentOnly(totalLaki, totalPenduduk, 'dari total penduduk') : '-';
           setWithPct('totalLaki', totalLaki, pctLakiText);
 
           // Perempuan / Total Penduduk
-          const pctPerempuanText = (totalPenduduk > 0) ? formatPercent(totalPerempuan, totalPenduduk, 'dari total penduduk') : '-';
+          const pctPerempuanText = (totalPenduduk > 0) ? formatPercentOnly(totalPerempuan, totalPenduduk, 'dari total penduduk') : '-';
           setWithPct('totalPerempuan', totalPerempuan, pctPerempuanText);
 
           // Sudah Rekam / Wajib Ream
-          const pctSudahText = (wajibRekam > 0) ? formatPercent(sudahRekam, wajibRekam, 'dari wajib perekaman KTP-el') : '-';
+          const pctSudahText = (wajibRekam > 0) ? formatPercentOnly(sudahRekam, wajibRekam, 'dari wajib perekaman KTP-el') : '-';
           setWithPct('totalSudahRekam', sudahRekam, pctSudahText);
 
           // Akta 0-4 tahun (gunakan aktaAda/wajibAkta if those represent 0-4)
-          const pctAktaText = (wajibAkta > 0) ? formatPercent(aktaAda, wajibAkta, 'dari wajib akta 0-4 tahun') : '-';
+          const pctAktaText = (wajibAkta > 0) ? formatPercentOnly(aktaAda, wajibAkta, 'dari wajib akta 0-4 tahun') : '-';
           setWithPct('totalAktaAda', aktaAda, pctAktaText);
 
           // Memiliki KIA / Wajib Memiliki KIA
-          const pctKiaText = (wajibKia > 0) ? formatPercent(kiaAda, wajibKia, 'dari wajib memiliki KIA') : '-';
+          const pctKiaText = (wajibKia > 0) ? formatPercentOnly(kiaAda, wajibKia, 'dari wajib memiliki KIA') : '-';
           setWithPct('totalKiaAda', kiaAda, pctKiaText);
 
           // other numeric cards
@@ -977,6 +977,14 @@
           } else {
             el.textContent = num.toLocaleString();
           }
+        }
+
+        // Kembalikan hanya teks persen + label, tanpa angka (contoh: "95,57% dari wajib perekaman KTP-el")
+        function formatPercentOnly(value, total, label = '') {
+        const v = Number(value) || 0;
+        const t = Number(total) || 0;
+        const pct = t ? ((v / t) * 100).toFixed(2).replace('.', ',') + '%' : '-';
+                return label ? `${pct} ${label}` : `${pct}`;
         }
 
         // Show error message
