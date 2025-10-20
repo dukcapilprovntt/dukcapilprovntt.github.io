@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Kependudukan dengan Google Sheets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+    <style>
+        body { box-sizing: border-box; }
+        .fade-in { animation: fadeIn 0.45s ease-in; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+        .card-hover { transition: all .25s ease; }
+        .card-hover:hover { transform:translateY(-6px); box-shadow:0 10px 20px rgba(0,0,0,0.08); }
+        .loading { width:18px;height:18px;border:3px solid #eee;border-top:3px solid #06b6d4;border-radius:50%;animation:spin 1s linear infinite;display:inline-block }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        /* make chart container horizontally scrollable for many regions */
+        .chart-scroll { overflow-x:auto; padding-bottom:12px; }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-full font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-blue-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-2">
+                     <img src="https://nttprov.go.id/img/ntt-min.png" alt="Logo Pemprov NTT" class="w-16 h-16 object-contain">
+                    
+                        <h2 class="text-2xl font-bold text-gray-800 leading-tight">
+                  Dinas Kependudukan dan Pencatatan Sipil<br>
+                  <span class="text-1xl text-gray-600">Provinsi Nusa Tenggara Timur</span>
+            </h2>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main (modified per request) -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="dashboardView" class="fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h1 class="text-2xl font-semibold text-gray-800">Perbandingan Penduduk Laki-laki vs Perempuan per Wilayah</h1>
+                <div class="flex items-center space-x-2">
+                    <button id="refreshBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Refresh</button>
+                    <button id="testConnBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">Test Koneksi</button>
+                </div>
+            </div>
+
+            <!-- Summary cards (simple) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white rounded-xl p-4 card-hover shadow">
+                    <p class="text-sm text-gray-500">Total Wilayah</p>
+                    <p id="countRegions" class="text-2xl font-bold text-gray-800">-</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 card-hover shadow">
+                    <p class="text-sm text-gray-500">Total Penduduk (Laki)</p>
+                    <p id="totalMale" class="text-2xl font-bold text-green-600">-</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 card-hover shadow">
+                    <p class="text-sm text-gray-500">Total Penduduk (Perempuan)</p>
+                    <p id="totalFemale" class="text-2xl font-bold text-pink-600">-</p>
+                </div>
+            </div>
+
+            <!-- Bar chart -->
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+                <h3 class="text-lg font-medium text-gray-700 mb-4">Bar Chart: Laki-laki vs Perempuan (per Wilayah)</h3>
+                <div class="chart-scroll">
+                    <div style="min-width:800px; height:420px;">
+                        <canvas id="maleFemaleBarChart"></canvas>
+                    </div>
+                </div>
+                <p id="chartNote" class="text-sm text-gray-500 mt-3">Sumbu X: Nama Wilayah — Sumbu Y: Jumlah Penduduk</p>
+            </div>
+
+            <!-- Raw table (compact) -->
+            <div class="bg-white rounded-xl shadow overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wilayah</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Laki-laki</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Perempuan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="regionsTable" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="4" class="px-4 py-6 text-center text-gray-500">
+                                <span class="loading"></span>
+                                <div class="mt-2">Memuat data...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- connection status -->
+            <div id="connectionStatus" class="hidden mt-4 p-3 rounded text-sm"></div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script>
+    // konfigurasi
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzRbb47oa7PvrBiJ5ErvZxEgA0iBohWMt5Aauz93QFJSlSi5ErzMMvaXVXK1XABR-S/exec';
+
+    let populationData = []; // array of objects {id, namaWilayah, pendudukLaki, pendudukPerempuan, ...}
+    let barChart = null;
+
+    // helper for connection status
+    function setConnectionStatus(ok, text) {
+        const el = document.getElementById('connectionStatus');
+        el.classList.remove('hidden');
+        if (ok) {
+            el.className = 'mt-4 p-3 rounded text-sm bg-green-50 border border-green-200 text-green-700';
+            el.textContent = '✅ ' + (text || 'Terhubung ke Google Apps Script');
+        } else {
+            el.className = 'mt-4 p-3 rounded text-sm bg-red-50 border border-red-200 text-red-700';
+            el.textContent = '❌ ' + (text || 'Gagal terhubung');
+        }
+    }
+
+    // Basic API wrapper (POST with action)
+    async function apiRequest(action, data = {}) {
+        try {
+            const res = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action, data }),
+                redirect: 'follow'
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const text = await res.text();
+            try { return JSON.parse(text); } catch(e) { throw new Error('Invalid JSON response'); }
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    // load data (read)
+    async function loadData() {
+        try {
+            document.getElementById('regionsTable').innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500"><span class="loading"></span><div class="mt-2">Memuat data...</div></td></tr>`;
+            const res = await apiRequest('read');
+            if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Tidak ada response success dari script');
+            populationData = Array.isArray(res.data) ? res.data : [];
+            renderTable();
+            renderSummary();
+            renderBarChart();
+            setConnectionStatus(true, 'Data berhasil dimuat (' + populationData.length + ' wilayah)');
+        } catch (err) {
+            console.error(err);
+            populationData = [];
+            document.getElementById('regionsTable').innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">⚠️ Tidak dapat memuat data: ${err.message}</td></tr>`;
+            setConnectionStatus(false, err.message);
+        }
+    }
+
+    // render simple table
+    function renderTable() {
+        const tbody = document.getElementById('regionsTable');
+        if (!populationData || populationData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">Tidak ada data</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = '';
+        populationData.forEach((row, i) => {
+            const nama = row.namaWilayah || row.nama || row.wilayah || '-';
+            const laki = Number(row.pendudukLaki || row.laki || row.male || 0);
+            const perempuan = Number(row.pendudukPerempuan || row.perempuan || row.female || 0);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="px-4 py-3 text-sm text-gray-700">${i+1}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">${escapeHtml(nama)}</td>
+                <td class="px-4 py-3 text-sm text-right text-green-600">${laki.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm text-right text-pink-600">${perempuan.toLocaleString()}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // render summary cards
+    function renderSummary() {
+        const totalRegions = populationData.length;
+        let totalMale = 0, totalFemale = 0;
+        populationData.forEach(r => {
+            totalMale += Number(r.pendudukLaki || r.laki || r.male || 0);
+            totalFemale += Number(r.pendudukPerempuan || r.perempuan || r.female || 0);
+        });
+        document.getElementById('countRegions').textContent = totalRegions;
+        document.getElementById('totalMale').textContent = totalMale.toLocaleString();
+        document.getElementById('totalFemale').textContent = totalFemale.toLocaleString();
+    }
+
+    // create/refresh bar chart
+    function renderBarChart() {
+        const ctx = document.getElementById('maleFemaleBarChart').getContext('2d');
+        const labels = populationData.map(r => r.namaWilayah || r.nama || r.wilayah || '-');
+        const males = populationData.map(r => Number(r.pendudukLaki || r.laki || r.male || 0));
+        const females = populationData.map(r => Number(r.pendudukPerempuan || r.perempuan || r.female || 0));
+
+        // destroy previous chart
+        if (barChart) {
+            try { barChart.destroy(); } catch(e) {}
+            barChart = null;
+        }
+
+        // register datalabels plugin if available
+        if (window.Chart && window.ChartDataLabels) {
+            try { Chart.register(ChartDataLabels); } catch(e) {}
+        }
+
+        barChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Laki-laki',
+                        data: males,
+                        backgroundColor: '#16a34a',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Perempuan',
+                        data: females,
+                        backgroundColor: '#ec4899',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString()}`
+                        }
+                    },
+                    datalabels: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { maxRotation: 45, minRotation: 0 },
+                        title: { display: true, text: 'Wilayah' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Penduduk' },
+                        ticks: {
+                            callback: value => Number(value).toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // quick test connection (GET)
+    async function testConnection() {
+        try {
+            const r = await fetch(GOOGLE_SCRIPT_URL, { method: 'GET', redirect: 'follow' });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            setConnectionStatus(true, 'Google Apps Script reachable (GET OK)');
+            return true;
+        } catch (err) {
+            setConnectionStatus(false, err.message);
+            return false;
+        }
+    }
+
+    // small escape helper
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    // events
+    document.getElementById('refreshBtn').addEventListener('click', loadData);
+    document.getElementById('testConnBtn').addEventListener('click', testConnection);
+
+    // init on DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+        // initialize empty chart so layout reserves space (optional)
+        const ctx = document.getElementById('maleFemaleBarChart').getContext('2d');
+        barChart = new Chart(ctx, { type:'bar', data:{labels:[], datasets:[]}, options:{responsive:true, maintainAspectRatio:false} });
+        // load data
+        testConnection().then(ok => { if (ok) loadData(); else loadData(); });
+    });
+    </script>
+</body>
+</html>
