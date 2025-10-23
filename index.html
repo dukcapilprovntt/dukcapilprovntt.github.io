@@ -64,36 +64,61 @@
         <!-- Dashboard View -->
         <div id="dashboardView" class="fade-in">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
-				
-                <a href="penduduk.html" class="block">
-                <!-- Total Penduduk -->
-                <div class="bg-white rounded-xl shadow-md p-6 card-hover cursor-pointer hover:shadow-lg transition">
-                    <div class="flex items-center justify-between">
+            <!-- TOP: Total Penduduk + Distribusi Gender (berdiri sendiri) -->
+            <div class="mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Total Penduduk (kiri / atas pada mobile) -->
+                    <a href="penduduk.html" class="block">
+                        <div class="bg-white rounded-xl shadow-md p-6 card-hover cursor-pointer hover:shadow-lg transition">
+                            <div class="relative">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-600">Total Penduduk</p>
+                                        <p id="totalPenduduk" class="text-3xl font-bold text-blue-600">-</p>
+                                    </div>
+                                    <div class="bg-blue-100 p-3 rounded-full">
+                                        <svg id="gambar" class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="relative w-full flex justify-center">
+                                    <canvas id="genderPieChart"></canvas>
+                                    <div id="totalPenduduk" class="absolute top-0 left-1/2 transform -translate-x-1/2 text-center font-bold text-gray-700"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- NEW: Line chart card (ambil data dari tes.html) -->
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                      <div class="flex items-center justify-between mb-4">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Total Penduduk</p>
-                            <p id="totalPenduduk" class="text-3xl font-bold text-blue-600">-</p>
+                          <p class="text-sm font-medium text-gray-600">Perekaman KTP-el per Minggu</p>
+                          <p id="lineChartSubtitle"></p>
                         </div>
-                        <div class="bg-blue-100 p-3 rounded-full">
-                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-                                </path>
-                            </svg>
+                        <div class="flex items-center gap-3">
+                          <select id="lineFilterBulan" class="px-2 py-1 border rounded bg-white text-sm">
+                            <option value="all">Semua Bulan</option>
+                          </select>
+                          <select id="lineFilterWilayah" class="px-2 py-1 border rounded bg-white text-sm">
+                            <option value="all">Semua Wilayah</option>
+                          </select>
                         </div>
+                      </div>
+                      <div class="w-full" style="height:200px">
+                        <canvas id="lineChartCard" height="160"></canvas>
+                      </div>
                     </div>
                 </div>
-                </a>
+            </div>
 
-                <!-- Gender Distribution Pie Chart -->
-                <div class="bg-white rounded-xl shadow-md p-6 card-hover xl:col-span-2">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Distribusi Gender</h3>
-                    <div class="relative h-48">
-                        <canvas id="genderPieChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Laki-laki -->
+            <!-- BOTTOM: kartu lainnya -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                
+                 <!-- Laki-laki -->
               <!--   <div class="bg-white rounded-xl shadow-md p-6 card-hover">
                     <div class="flex items-center justify-between">
                         <div>
@@ -1242,9 +1267,117 @@ function getLastMonthDate() {
         });
     </script>
 
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98eb93151460548b',t:'MTc2MDQ5MjA3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98eb93151460548b',t:'MTc2MDQ5MjA3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<!-- Insert small script to power the line chart (uses Chart.js already loaded) -->
+<script>
+(function(){
+  const PEREKAMAN_URL = "https://script.google.com/macros/s/AKfycbwx9AyhGTyi8lrPwyCcCoesfxEhTCVzRxgtW7xLojlDt4B4J4w91uJW41OQLrJzWx1TVA/exec";
+  const selBulan = document.getElementById('lineFilterBulan');
+  const selWilayah = document.getElementById('lineFilterWilayah');
+  const subtitle = document.getElementById('lineChartSubtitle');
+  const ctxLine = document.getElementById('lineChartCard').getContext('2d');
+  let rawLineData = [];
+  let lineChart = null;
+
+  function populateLineFilters(data){
+    const bulan = new Set();
+    const wilayah = new Set();
+    data.forEach(r => { if (r.bulan) bulan.add(r.bulan); if (r.wilayah) wilayah.add(r.wilayah); });
+    selBulan.innerHTML = '<option value="all">Semua Bulan</option>';
+    Array.from(bulan).sort().forEach(b => {
+      const o = document.createElement('option'); o.value = b; o.textContent = b; selBulan.appendChild(o);
+    });
+    selWilayah.innerHTML = '<option value="all">Semua Wilayah</option>';
+    Array.from(wilayah).sort().forEach(w => {
+      const o = document.createElement('option'); o.value = w; o.textContent = w; selWilayah.appendChild(o);
+    });
+  }
+
+  function aggregateByMinggu(filtered){
+    const map = new Map();
+    filtered.forEach(row => {
+      const k = row.minggu != null ? String(row.minggu) : "0";
+      const v = Number(row.jumlahPenambahan) || 0;
+      map.set(k, (map.get(k)||0) + v);
+    });
+    const keys = Array.from(map.keys()).sort((a,b)=>{
+      const na=Number(a), nb=Number(b);
+      if(!isNaN(na) && !isNaN(nb)) return na-nb;
+      return a.localeCompare(b);
+    });
+    return { labels: keys, values: keys.map(k => map.get(k)) };
+  }
+
+  function renderLine(labels, values, labelName){
+    if(lineChart) lineChart.destroy();
+    lineChart = new Chart(ctxLine, {
+      type: 'line',
+      data: { labels, datasets: [{ label: labelName, data: values, borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.15)', fill:true, tension:0.3 }]},
+      options: { responsive:true, maintainAspectRatio:false, scales:{ x:{ title:{display:false, text:'Minggu'}}, y:{ beginAtZero:true, title:{display:true, text:'Jumlah Penambahan'} }}, plugins:{ legend:{display:false}}}
+    });
+  }
+
+  function getFiltered(){
+    const b = selBulan.value;
+    const w = selWilayah.value;
+    return rawLineData.filter(r => (b==='all' || r.bulan===b) && (w==='all' || r.wilayah===w));
+  }
+
+  function updateLine(){
+    const filtered = getFiltered();
+    const agg = aggregateByMinggu(filtered);
+
+    // jika wilayah adalah "Nusa Tenggara Timur" jangan tampilkan nama wilayah di subtitle
+    const bulanLabel = selBulan.value === 'all' ? 'Semua Bulan' : selBulan.value;
+    const wilayahVal = (selWilayah.value || '').trim();
+    const isNTT = wilayahVal.toLowerCase() === 'nusa tenggara timur';
+
+    const labelName = isNTT ? bulanLabel : `${wilayahVal || 'Semua Wilayah'} — ${bulanLabel}`;
+
+    renderLine(agg.labels, agg.values, 'Jumlah Penambahan per Minggu');
+  }
+
+  async function loadLineData(){
+    try{
+      const res = await fetch(PEREKAMAN_URL);
+      const data = await res.json();
+      rawLineData = Array.isArray(data) ? data : [];
+      populateLineFilters(rawLineData);
+
+      // default bulan = last month in options (try parse YYYY-MM etc.)
+      const bulanOptions = Array.from(selBulan.options).map(o=>o.value).filter(v=>v!=='all');
+      if(bulanOptions.length){
+        const parseB = v=>{ const m=v.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/); if(m) return new Date(Number(m[1]),Number(m[2])-1, m[3]?Number(m[3]):1).getTime(); const p=Date.parse(v); return isNaN(p)?null:p; };
+        let best=null, bestT=null;
+        bulanOptions.forEach(b=>{
+          const t=parseB(b);
+          if(t!=null){ if(bestT==null||t>bestT){bestT=t;best=b;} } else { if(best==null) best=b; else if(b>best) best=b; }
+        });
+        const defaultB = best || bulanOptions[bulanOptions.length-1];
+        if([...selBulan.options].some(o=>o.value===defaultB)) selBulan.value = defaultB;
+      }
+
+      // default wilayah Nusa Tenggara Timur if present
+      const defaultW = rawLineData.find(r=>r.wilayah==='Nusa Tenggara Timur') ? 'Nusa Tenggara Timur' : (rawLineData[0] && rawLineData[0].wilayah) || 'all';
+      if([...selWilayah.options].some(o=>o.value===defaultW)) selWilayah.value = defaultW;
+
+      updateLine();
+    } catch(e){
+      console.error('Gagal memuat perekaman:', e);
+      document.getElementById('lineChartCard').parentElement.innerHTML = '<div class="text-red-600 p-3">Gagal memuat chart.</div>';
+    }
+  }
+
+  selBulan.addEventListener('change', updateLine);
+  selWilayah.addEventListener('change', updateLine);
+
+  // wait DOM ready if script executed earlier
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadLineData);
+  } else {
+    loadLineData();
+  }
+})();
+</script>
+</body>
 </html>
-
-
-
-
