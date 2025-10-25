@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard KIA NTT</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <style>
+    body { box-sizing: border-box; }
+    .fade-in { animation: fadeIn 0.45s ease-in; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+    .card-hover { transition: all .25s ease; }
+    .card-hover:hover { transform:translateY(-6px); box-shadow:0 10px 20px rgba(0,0,0,0.08); }
+    .loading { width:18px;height:18px;border:3px solid #eee;border-top:3px solid #06b6d4;border-radius:50%;animation:spin 1s linear infinite;display:inline-block }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .chart-scroll { overflow-x:auto; padding-bottom:12px; }
+    .sort-btn { display:inline-flex; align-items:center; gap:.375rem; color:inherit; font-weight:600; background:none; border:0; cursor:pointer; padding:0; }
+    .sort-icon { font-size:12px; color:#6b7280; width:18px; text-align:center; display:inline-block; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-full font-sans">
+  <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-blue-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-6">
+                <div class="flex items-center">
+                    <img src="https://nttprov.go.id/img/ntt-min.png" class="w-16 h-16 object-contain" alt="logo">
+                    <div class="ml-4">
+                    <h2 class="text-2xl font-bold text-gray-800 leading-tight">
+                            Dinas Kependudukan dan Pencatatan Sipil<br>
+                            <span class="text-1xl text-gray-600">Provinsi Nusa Tenggara Timur</span>
+                        </h2>
+                    </div>
+                </div>
+            
+                <!-- Home button (kanan atas) -->
+                <div class="flex items-center">
+                    <a href="../../index.html" class="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M10.707 1.707a1 1 0 00-1.414 0L2 9v8a1 1 0 001 1h5a1 1 0 001-1v-5h2v5a1 1 0 001 1h5a1 1 0 001-1V9l-7.293-7.293z"/>
+                    </svg>
+                    <span class="text-sm font-medium">Home</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="fade-in">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-semibold text-gray-800">KIA per Wilayah</h2>
+      </div>
+
+      <!-- summary -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-4 card-hover shadow">
+          <p class="text-sm text-gray-500">Wajib Memiliki KIA</p>
+          <p id="totalWajibKiaCard" class="text-2xl font-bold text-blue-600">-</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 card-hover shadow">
+          <p class="text-sm text-gray-500">Memiliki KIA</p>
+          <p id="totalKiaAdaCard" class="text-2xl font-bold text-green-600">-</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 card-hover shadow">
+          <p class="text-sm text-gray-500">Belum Memiliki KIA</p>
+          <p id="totalKiaTidakCard" class="text-2xl font-bold text-red-600">-</p>
+        </div>
+      </div>
+
+      <!-- chart -->
+      <div class="bg-white rounded-xl shadow p-6 mb-6">
+        <h3 class="text-lg font-medium text-gray-700 mb-4">Perbandingan Wajib / Memiliki / Belum KIA per Wilayah</h3>
+        <div class="chart-scroll">
+          <div style="min-width:800px; height:440px;">
+            <canvas id="kiaBarChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- table -->
+      <div class="bg-white rounded-xl shadow overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">No.</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Wilayah</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                <button id="sortWajibBtn" class="sort-btn"><span>Wajib KIA</span><span id="sortWajibIcon" class="sort-icon">⇅</span></button>
+              </th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                <button id="sortSudahBtn" class="sort-btn"><span>Memiliki KIA</span><span id="sortSudahIcon" class="sort-icon">⇅</span></button>
+              </th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                <button id="sortBelumBtn" class="sort-btn"><span>Belum KIA</span><span id="sortBelumIcon" class="sort-icon">⇅</span></button>
+              </th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                <button id="sortPercentBtn" class="sort-btn"><span>% Memiliki</span><span id="sortPercentIcon" class="sort-icon">⇅</span></button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="kiaTableBody" class="bg-white divide-y divide-gray-200">
+            <tr>
+              <td colspan="6" class="px-4 py-6 text-center text-gray-500">
+                <span class="loading"></span>
+                <div class="mt-2">Memuat data...</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzRbb47oa7PvrBiJ5ErvZxEgA0iBohWMt5Aauz93QFJSlSi5ErzMMvaXVXK1XABR-S/exec';
+    let populationData = [];
+    let kiaChart = null;
+    let sortState = { key: null, asc: true };
+
+    async function apiRequest(action, data={}) {
+      const res = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ action, data }), redirect:'follow'
+      });
+      if (!res.ok) throw new Error('HTTP '+res.status);
+      const text = await res.text();
+      try { return JSON.parse(text); } catch(e) { throw new Error('Invalid JSON response'); }
+    }
+
+    // data accessors for KIA
+    function getWajibKia(row) { return Number(row.wajibKia || row.wajib_Kia || row.wajib_kia || 0); }
+    function getKiaAda(row)  { return Number(row.kiaAda || row.kia_Ada || row.kia_ada || 0); }
+    function getKiaTidak(row){ return Number(row.kiaTidak || row.kia_Tidak || row.kia_tidak || 0); }
+    function pct(value, total) { return total ? ((value/total)*100).toFixed(2).replace('.', ',') + '%' : '0,00%'; }
+    function getPctForRow(row) {
+      const w = getWajibKia(row);
+      const s = getKiaAda(row);
+      return w ? (s / w) * 100 : 0;
+    }
+
+    // sorting
+    function applySort() {
+      if (!sortState.key) return;
+      const map = { wajib: getWajibKia, sudah: getKiaAda, belum: getKiaTidak, percent: getPctForRow };
+      const fn = map[sortState.key];
+      if (!fn) return;
+      populationData.sort((a,b) => sortState.asc ? fn(a)-fn(b) : fn(b)-fn(a));
+    }
+    function toggleSort(key) {
+      if (sortState.key === key) sortState.asc = !sortState.asc; else { sortState.key = key; sortState.asc = false; }
+      updateSortIcons();
+      applySort();
+      renderSummary();
+      renderTable();
+      renderChart();
+    }
+    function updateSortIcons(){
+      const icons = { wajib: 'sortWajibIcon', sudah:'sortSudahIcon', belum:'sortBelumIcon', percent:'sortPercentIcon' };
+      Object.keys(icons).forEach(k => {
+        const el = document.getElementById(icons[k]);
+        if (el) el.textContent = '⇅';
+      });
+      const cur = document.getElementById(icons[sortState.key]);
+      if (cur) cur.textContent = sortState.asc ? '▲' : '▼';
+    }
+
+    // load data
+    async function loadData(){
+      try {
+        document.getElementById('kiaTableBody').innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-500"><span class="loading"></span><div class="mt-2">Memuat data...</div></td></tr>`;
+        const res = await apiRequest('read');
+        if (!res || !res.success) throw new Error(res?.message||'No data');
+        populationData = Array.isArray(res.data) ? res.data : [];
+        applySort();
+        renderSummary();
+        renderTable();
+        renderChart();
+      } catch (err) {
+        console.error(err);
+        document.getElementById('kiaTableBody').innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-red-600">⚠️ ${err.message}</td></tr>`;
+      }
+    }
+
+    // rendering
+    function renderSummary(){
+      let totalWajib=0, totalAda=0, totalTidak=0;
+      populationData.forEach(r => {
+        totalWajib += getWajibKia(r);
+        totalAda += getKiaAda(r);
+        totalTidak += getKiaTidak(r);
+      });
+      document.getElementById('totalWajibKiaCard').textContent = totalWajib.toLocaleString();
+      document.getElementById('totalKiaAdaCard').innerHTML = totalAda.toLocaleString();
+      document.getElementById('totalKiaTidakCard').innerHTML = totalTidak.toLocaleString();
+    }
+
+    function renderTable(){
+      const tbody = document.getElementById('kiaTableBody');
+      if (!populationData?.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">Tidak ada data</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = '';
+      populationData.forEach((rw, i) => {
+        const wajib = getWajibKia(rw);
+        const ada = getKiaAda(rw);
+        const belum = getKiaTidak(rw);
+        const pctText = pct(ada, wajib); // formatted "xx,xx%"
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="px-4 py-3 text-sm text-gray-700 font-semibold">${i+1}</td>
+          <td class="px-4 py-3 text-sm font-semibold text-gray-900">${escapeHtml(rw.namaWilayah||rw.nama||'-')}</td>
+          <td class="px-4 py-3 text-sm font-semibold text-right text-blue-900">${wajib.toLocaleString()}</td>
+          <td class="px-4 py-3 text-sm font-semibold text-right text-emerald-600">${ada.toLocaleString()}</td>
+          <td class="px-4 py-3 text-sm font-semibold text-right text-red-600">${belum.toLocaleString()}</td>
+          <td class="px-4 py-3 text-sm font-semibold text-right text-emerald-600">${pctText}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderChart(){
+      const ctx = document.getElementById('kiaBarChart').getContext('2d');
+      const labels = populationData.map(r => r.namaWilayah || r.nama || '-');
+      const wajibArr = populationData.map(getWajibKia);
+      const adaArr = populationData.map(getKiaAda);
+      const belumArr = populationData.map(getKiaTidak);
+
+      if (kiaChart) { try { kiaChart.destroy(); } catch(e) {} }
+      if (window.Chart && window.ChartDataLabels) { try { Chart.register(ChartDataLabels); } catch(e) {} }
+
+      kiaChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Wajib KIA',    data: wajibArr,  backgroundColor: '#1e40af', borderRadius: 4 }, // navy
+            { label: 'Memiliki KIA', data: adaArr,    backgroundColor: '#16a34a', borderRadius: 4 }, // green
+            { label: 'Belum KIA',    data: belumArr,  backgroundColor: '#dc2626', borderRadius: 4 }  // red
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: function(ctx) {
+                  const value = Number(ctx.raw) || 0;
+                  const formatted = value.toLocaleString();
+                  // show percentage for "Memiliki" and "Belum" relative to "Wajib"
+                  if (ctx.datasetIndex > 0) {
+                    const wajib = wajibArr[ctx.dataIndex] || 0;
+                    const pct = wajib ? ((value / wajib) * 100).toFixed(2).replace('.', ',') + '%' : '0,00%';
+                    return `${ctx.dataset.label}: ${formatted} (${pct})`;
+                  }
+                  return `${ctx.dataset.label}: ${formatted}`;
+                }
+              }
+            },
+            datalabels: {
+              color: '#111827',
+              anchor: 'end',
+              align: 'end',
+              formatter: function(value, ctx) {
+                const idx = ctx.dataIndex;
+                const dsIdx = ctx.datasetIndex;
+                const wajib = wajibArr[idx] || 0;
+                if (wajib <= 0) return '';
+                // show percentage for Memiliki / Belum, raw number for Wajib
+                if (dsIdx > 0) {
+                  return ((value / wajib) * 100).toFixed(2).replace('.', ',') + '%';
+                }
+                return value.toLocaleString();
+              },
+              font: { weight: '600', size: 11 },
+              padding: 4
+            }
+          },
+          scales: {
+            x: {
+              ticks: { maxRotation: 45, minRotation: 45 },
+              title: { display: true, text: 'Wilayah' }
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Jumlah' },
+              ticks: { callback: v => Number(v).toLocaleString() }
+            }
+          }
+        }
+      });
+    }
+
+    // helpers
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+
+    // events
+    document.getElementById('sortWajibBtn').addEventListener('click', ()=>toggleSort('wajib'));
+    document.getElementById('sortSudahBtn').addEventListener('click', ()=>toggleSort('sudah'));
+    document.getElementById('sortBelumBtn').addEventListener('click', ()=>toggleSort('belum'));
+    document.getElementById('sortPercentBtn').addEventListener('click', ()=>toggleSort('percent'));
+
+    // init
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('kiaBarChart');
+      const ctx = canvas.getContext('2d');
+
+      // Jika ada Chart tersimpan di canvas, hancurkan dulu (safety)
+      try {
+        const existing = Chart.getChart(canvas); // Chart.js v3+
+        if (existing) existing.destroy();
+      } catch (e) { /* ignore */ }
+
+      // simpan placeholder ke variable kiaChart sehingga dapat dihancurkan nanti
+      kiaChart = new Chart(ctx, { type:'bar', data:{ labels:[], datasets:[] }, options:{ responsive:true, maintainAspectRatio:false } });
+
+      loadData();
+    });
+  </script>
+</body>
+</html>

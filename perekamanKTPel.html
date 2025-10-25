@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard KTP-el NTT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+    <style>
+        body { box-sizing: border-box; }
+        .fade-in { animation: fadeIn 0.45s ease-in; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+        .card-hover { transition: all .25s ease; }
+        .card-hover:hover { transform:translateY(-6px); box-shadow:0 10px 20px rgba(0,0,0,0.08); }
+        .loading { width:18px;height:18px;border:3px solid #eee;border-top:3px solid #06b6d4;border-radius:50%;animation:spin 1s linear infinite;display:inline-block }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .chart-scroll { overflow-x:auto; padding-bottom:12px; }
+        .sort-btn { display:inline-flex; align-items:center; gap:.375rem; color:inherit; font-weight:600; background:none; border:0; cursor:pointer; padding:0; }
+        .sort-icon { font-size:12px; color:#6b7280; width:18px; text-align:center; display:inline-block; }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-full font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-blue-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-2">
+                     <img src="https://nttprov.go.id/img/ntt-min.png" alt="Logo Pemprov NTT" class="w-16 h-16 object-contain">
+                    
+                    <h2 class="text-2xl font-bold text-gray-800 leading-tight">
+                        Dinas Kependudukan dan Pencatatan Sipil<br>
+                        <span class="text-1xl text-gray-600">Provinsi Nusa Tenggara Timur</span>
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="dashboardView" class="fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h1 class="text-2xl font-semibold text-gray-800">Perekaman KTP-el per Wilayah</h1>
+            </div>
+
+            <!-- Summary cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white rounded-xl p-4 card-hover shadow">
+                    <p class="text-sm text-gray-500">Wajib Perekaman KTP-el</p>
+                    <p id="totalWajib" class="text-2xl font-bold text-gray-800">-</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 card-hover shadow">
+                    <p class="text-sm text-gray-500">Sudah Perekaman</p>
+                    <p id="totalSudah" class="text-2xl font-bold text-emerald-600">-</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 card-hover shadow">
+                    <p class="text-sm text-gray-500">Belum Perekaman</p>
+                    <p id="totalBelum" class="text-2xl font-bold text-orange-600">-</p>
+                </div>
+            </div>
+
+            <!-- Bar chart -->
+            <div class="bg-white rounded-xl shadow p-6 mb-6">
+                <h3 class="text-lg font-medium text-gray-700 mb-4">Status Perekaman KTP-el per Wilayah</h3>
+                <div class="chart-scroll">
+                    <div style="min-width:800px; height:420px;">
+                        <canvas id="ktpelBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data table -->
+            <div class="bg-white rounded-xl shadow overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">No.</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Wilayah</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                                <button id="sortWajibBtn" class="sort-btn">
+                                    <span>Wajib KTP-el</span>
+                                    <span id="sortWajibIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                                <button id="sortSudahBtn" class="sort-btn">
+                                    <span>Sudah Rekam</span>
+                                    <span id="sortSudahIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                                <button id="sortBelumBtn" class="sort-btn">
+                                    <span>Belum Rekam</span>
+                                    <span id="sortBelumIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                                <button id="sortPercentBtn" class="sort-btn">
+                                    <span>Sudah %</span>
+                                    <span id="sortPercentIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="regionsTable" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="px-4 py-6 text-center text-gray-500">
+                                <span class="loading"></span>
+                                <div class="mt-2">Memuat data...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Connection status -->
+            <div id="connectionStatus" class="hidden mt-4 p-3 rounded text-sm"></div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script>
+    // Configuration
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzRbb47oa7PvrBiJ5ErvZxEgA0iBohWMt5Aauz93QFJSlSi5ErzMMvaXVXK1XABR-S/exec';
+
+    let populationData = [];
+    let barChart = null;
+    let sortState = { key: null, asc: true };
+
+    // Helper functions
+    function setConnectionStatus(ok, text) {
+        const el = document.getElementById('connectionStatus');
+        el.classList.remove('hidden');
+        el.className = ok ? 
+            'mt-4 p-3 rounded text-sm bg-green-50 border border-green-200 text-green-700' :
+            'mt-4 p-3 rounded text-sm bg-red-50 border border-red-200 text-red-700';
+        el.textContent = (ok ? '✅ ' : '❌ ') + (text || (ok ? 'Terhubung ke Google Apps Script' : 'Gagal terhubung'));
+    }
+
+    async function apiRequest(action, data = {}) {
+        try {
+            const res = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action, data }),
+                redirect: 'follow'
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const text = await res.text();
+            try { return JSON.parse(text); } 
+            catch(e) { throw new Error('Invalid JSON response'); }
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    // Data helpers
+    function getWajibCount(row) { return Number(row.wajibRekam || 0); }
+    function getSudahCount(row) { return Number(row.sudahRekam || 0); }
+    function getBelumCount(row) { return Number(row.belumRekam || 0); }
+    function getPercentage(row) {
+        const wajib = getWajibCount(row);
+        const sudah = getSudahCount(row);
+        return wajib ? (sudah / wajib) * 100 : 0;
+    }
+    
+    function calculatePercentage(nilai, total) {
+        if (!total) return '0,00%';
+        return ((nilai / total) * 100).toFixed(2).replace('.', ',') + '%';
+    }
+
+    // Sort functionality
+    function applySort() {
+        if (!sortState.key) return;
+        const keyFn = {
+            'wajib': getWajibCount,
+            'sudah': getSudahCount,
+            'belum': getBelumCount,
+            'percent': getPercentage
+        }[sortState.key];
+        
+        if (keyFn) {
+            populationData.sort((a,b) => 
+                sortState.asc ? keyFn(a) - keyFn(b) : keyFn(b) - keyFn(a)
+            );
+        }
+    }
+
+    function toggleSortBy(column) {
+        if (sortState.key === column) {
+            sortState.asc = !sortState.asc;
+        } else {
+            sortState.key = column;
+            sortState.asc = false;
+        }
+        
+        // Update sort icons
+        const icons = {
+            'wajib': document.getElementById('sortWajibIcon'),
+            'sudah': document.getElementById('sortSudahIcon'),
+            'belum': document.getElementById('sortBelumIcon'),
+            'percent': document.getElementById('sortPercentIcon')
+        };
+        
+        Object.keys(icons).forEach(key => {
+            icons[key].textContent = '⇅';
+        });
+        
+        if (icons[sortState.key]) {
+            icons[sortState.key].textContent = sortState.asc ? '▲' : '▼';
+        }
+
+        applySort();
+        renderTable();
+        renderSummary();
+        renderBarChart();
+    }
+
+    // Data loading
+    async function loadData() {
+        try {
+            document.getElementById('regionsTable').innerHTML = `
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">
+                    <span class="loading"></span>
+                    <div class="mt-2">Memuat data...</div>
+                </td></tr>`;
+                
+            const res = await apiRequest('read');
+            if (!res || !res.success) throw new Error(res?.message || 'Tidak ada response success dari script');
+            
+            populationData = Array.isArray(res.data) ? res.data : [];
+            applySort();
+            renderTable();
+            renderSummary();
+            renderBarChart();
+            setConnectionStatus(true, 'Data berhasil dimuat (' + populationData.length + ' wilayah)');
+        } catch (err) {
+            console.error(err);
+            populationData = [];
+            document.getElementById('regionsTable').innerHTML = `
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">
+                    ⚠️ Tidak dapat memuat data: ${err.message}
+                </td></tr>`;
+            setConnectionStatus(false, err.message);
+        }
+    }
+
+    // Rendering functions
+    function renderTable() {
+        const tbody = document.getElementById('regionsTable');
+        if (!populationData?.length) {
+            tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">Tidak ada data</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = '';
+        populationData.forEach((row, i) => {
+            const wajib = getWajibCount(row);
+            const sudah = getSudahCount(row);
+            const belum = getBelumCount(row);
+            const pctSudah = calculatePercentage(sudah, wajib);
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="px-4 py-3 text-sm text-gray-700">${i+1}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">${escapeHtml(row.namaWilayah || row.nama || '-')}</td>
+                <td class="px-4 py-3 text-sm font-medium text-right text-blue-900">${wajib.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm font-medium text-right text-emerald-600">${sudah.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm font-medium text-right text-red-600">${belum.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm font-medium text-right text-blue-600">${pctSudah}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderSummary() {
+        let totalWajib = 0, totalSudah = 0, totalBelum = 0;
+        populationData.forEach(r => {
+            totalWajib += getWajibCount(r);
+            totalSudah += getSudahCount(r);
+            totalBelum += getBelumCount(r);
+        });
+        
+        document.getElementById('totalWajib').textContent = totalWajib.toLocaleString();
+        document.getElementById('totalSudah').textContent = totalSudah.toLocaleString();
+        document.getElementById('totalBelum').textContent = totalBelum.toLocaleString();
+    }
+
+    function renderBarChart() {
+        const ctx = document.getElementById('ktpelBarChart').getContext('2d');
+        const labels = populationData.map(r => r.namaWilayah || r.nama || '-');
+        const wajibData = populationData.map(getWajibCount);
+        const sudahData = populationData.map(getSudahCount);
+        const belumData = populationData.map(getBelumCount);
+
+        if (barChart) {
+            try { barChart.destroy(); } catch(e) {}
+        }
+
+        if (window.Chart && window.ChartDataLabels) {
+            try { Chart.register(ChartDataLabels); } catch(e) {}
+        }
+
+        barChart = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                  labels,
+                  datasets: [
+                      {
+                          label: 'Wajib KTP-el',
+                          data: wajibData,
+                          backgroundColor: '#1e3a8a', 
+                          borderRadius: 4
+                      },
+                      {
+                          label: 'Sudah Rekam',
+                          data: sudahData,
+                          backgroundColor: '#059669', 
+                          borderRadius: 4
+                      },
+                      {
+                          label: 'Belum Rekam',
+                          data: belumData,
+                          backgroundColor: '#dc2626', 
+                          borderRadius: 4
+                      }
+                  ]
+              },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const value = Number(ctx.raw).toLocaleString();
+                                if (ctx.datasetIndex === 1) { // Untuk "Sudah Rekam"
+                                    const wajib = wajibData[ctx.dataIndex];
+                                    const pct = calculatePercentage(ctx.raw, wajib);
+                                    return `${ctx.dataset.label}: ${value} (${pct})`;
+                                }
+                                return `${ctx.dataset.label}: ${value}`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { maxRotation: 45, minRotation: 45 },
+                        title: { display: true, text: 'Wilayah' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah' },
+                        ticks: {
+                            callback: value => Number(value).toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // HTML escape helper
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, m => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        })[m]);
+    }
+
+    // Event listeners
+    document.getElementById('sortWajibBtn').addEventListener('click', () => toggleSortBy('wajib'));
+    document.getElementById('sortSudahBtn').addEventListener('click', () => toggleSortBy('sudah'));
+    document.getElementById('sortBelumBtn').addEventListener('click', () => toggleSortBy('belum'));
+    document.getElementById('sortPercentBtn').addEventListener('click', () => toggleSortBy('percent'));
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const ctx = document.getElementById('ktpelBarChart').getContext('2d');
+        barChart = new Chart(ctx, {
+            type:'bar',
+            data:{ labels:[], datasets:[] },
+            options:{ responsive:true, maintainAspectRatio:false }
+        });
+        
+        loadData();
+    });
+    </script>
+</body>
+</html>

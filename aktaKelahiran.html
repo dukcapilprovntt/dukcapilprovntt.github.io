@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Akta Kelahiran NTT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+    <style>
+        body { box-sizing: border-box; }
+        .fade-in { animation: fadeIn 0.45s ease-in; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+        .chart-scroll { overflow-x:auto; padding-bottom:12px; }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-full font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-blue-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-6">
+                <div class="flex items-center">
+                <img src="https://nttprov.go.id/img/ntt-min.png" class="w-16 h-16 object-contain" alt="logo">
+                <div class="ml-4">
+                    <h1 class="text-2xl font-bold text-gray-800">Perekaman & Kepemilikan KIA</h1>
+                    <p class="text-sm text-gray-600">Provinsi Nusa Tenggara Timur</p>
+                </div>
+                </div>
+
+                <!-- Home button (kanan atas) -->
+                <div class="flex items-center">
+                <a href="../../index.html" class="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M10.707 1.707a1 1 0 00-1.414 0L2 9v8a1 1 0 001 1h5a1 1 0 001-1v-5h2v5a1 1 0 001 1h5a1 1 0 001-1V9l-7.293-7.293z"/>
+                    </svg>
+                    <span class="text-sm font-medium">Home</span>
+                </a>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Perbandingan Akta Kelahiran 0-4 Tahun per Wilayah</h3>
+            <div class="relative h-[600px]">
+                <canvas id="aktaBarChart"></canvas>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">Sumber: Google Sheets</p>
+        </div>
+
+        <!-- Add this after the chart div and before the closing main tag -->
+        <div class="bg-white rounded-xl shadow-md p-6 mt-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">No.</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Wilayah</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                                <button id="sortWajibBtn" class="sort-btn">
+                                    <span>Wajib Akta</span>
+                                    <span id="sortWajibIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                                <button id="sortSudahBtn" class="sort-btn">
+                                    <span>Memiliki Akta</span>
+                                    <span id="sortSudahIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                                <button id="sortBelumBtn" class="sort-btn">
+                                    <span>Belum Akta</span>
+                                    <span id="sortBelumIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">
+                                <button id="sortPercentBtn" class="sort-btn">
+                                    <span>% Memiliki</span>
+                                    <span id="sortPercentIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTable" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="px-4 py-4 text-center text-gray-500">
+                                <div class="flex items-center justify-center">
+                                    Memuat data...
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzRbb47oa7PvrBiJ5ErvZxEgA0iBohWMt5Aauz93QFJSlSi5ErzMMvaXVXK1XABR-S/exec';
+
+    // Fetch data from Google Apps Script
+    async function fetchSheetsData() {
+        try {
+            const res = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action: 'read' }),
+                redirect: 'follow'
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const text = await res.text();
+            const json = JSON.parse(text);
+            if (!json.success) throw new Error(json.message || 'Gagal membaca data');
+            return json.data || [];
+        } catch (err) {
+            console.error('Fetch sheets error:', err);
+            return [];
+        }
+    }
+
+    let aktaBarChart = null;
+
+    function initChart(labels, wajibArr, sudahArr, belumArr) {
+        const ctx = document.getElementById('aktaBarChart').getContext('2d');
+        try { Chart.register(ChartDataLabels); } catch(e) {}
+        if (aktaBarChart) aktaBarChart.destroy();
+
+        aktaBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Wajib Akta Kelahiran 0-4 Tahun',
+                        data: wajibArr,
+                        backgroundColor: '#1e40af', // biru navy
+                    },
+                    {
+                        label: 'Memiliki Akta Kelahiran 0-4 Tahun',
+                        data: sudahArr,
+                        backgroundColor: '#16a34a', // hijau
+                    },
+                    {
+                        label: 'Belum Akta Kelahiran 0-4 Tahun',
+                        data: belumArr,
+                        backgroundColor: '#dc2626', // merah
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { 
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(ctx) {
+                                const value = ctx.raw || 0;
+                                const wajib = wajibArr[ctx.dataIndex] || 0;
+                                let text = `${ctx.dataset.label}: ${value.toLocaleString()}`;
+                                
+                                // Add percentage for "Sudah" and "Belum"
+                                if (ctx.datasetIndex > 0 && wajib > 0) {
+                                    const percentage = ((value / wajib) * 100).toFixed(2).replace('.', ',');
+                                    text += ` (${percentage}%)`;
+                                }
+                                
+                                return text;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        color: '#111827',
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: function(value, ctx) {
+                            const idx = ctx.dataIndex;
+                            const datasetIdx = ctx.datasetIndex;
+                            const wajib = wajibArr[idx] || 0;
+                            
+                            if (wajib <= 0) return '';
+                            
+                            // Show percentage only for "Sudah" and "Belum"
+                            if (datasetIdx > 0) {
+                                const pct = ((value / wajib) * 100).toFixed(2).replace('.', ',');
+                                return pct + '%';
+                            }
+                            
+                            return value.toLocaleString();
+                        },
+                        font: { weight: '600', size: 11 },
+                        padding: 4
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        title: { display: true, text: 'Wilayah' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah' },
+                        ticks: {
+                            callback: value => value.toLocaleString()
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+    }
+
+    // Add these variables at the top with other constants
+    let sortState = { key: null, asc: true };
+
+    // Add these functions before the main flow
+    function getPercentage(wajib, sudah) {
+        if (!wajib) return 0;
+        return (sudah / wajib) * 100;
+    }
+
+    function toggleSort(key) {
+        if (sortState.key === key) {
+            sortState.asc = !sortState.asc;
+        } else {
+            sortState.key = key;
+            sortState.asc = true;
+        }
+        
+        updateSortIcons();
+        renderTable();
+    }
+
+    function updateSortIcons() {
+        const icons = {
+            'wajib': document.getElementById('sortWajibIcon'),
+            'sudah': document.getElementById('sortSudahIcon'),
+            'belum': document.getElementById('sortBelumIcon'),
+            'percent': document.getElementById('sortPercentIcon')
+        };
+        
+        Object.keys(icons).forEach(key => {
+            if (icons[key]) icons[key].textContent = '⇅';
+        });
+        
+        if (sortState.key && icons[sortState.key]) {
+            icons[sortState.key].textContent = sortState.asc ? '▲' : '▼';
+        }
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('dataTable');
+        if (!rows?.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">Tidak ada data</td></tr>';
+            return;
+        }
+
+        // Sort data if needed
+        const sortedData = [...rows].sort((a, b) => {
+            const getVal = (row, key) => {
+                switch(key) {
+                    case 'wajib': return Number(row.wajibAkta || row.wajib_akta || 0);
+                    case 'sudah': return Number(row.aktaAda || row.akta_ada || 0);
+                    case 'belum': return Number(row.aktaTidak || row.akta_tidak || 0);
+                    case 'percent': 
+                        const wajib = Number(row.wajibAkta || row.wajib_akta || 0);
+                        const sudah = Number(row.aktaAda || row.akta_ada || 0);
+                        return getPercentage(wajib, sudah);
+                    default: return 0;
+                }
+            };
+            
+            const aVal = getVal(a, sortState.key);
+            const bVal = getVal(b, sortState.key);
+            return sortState.asc ? aVal - bVal : bVal - aVal;
+        });
+
+        // Render sorted data
+        tbody.innerHTML = sortedData.map((row, i) => {
+            const wajib = Number(row.wajibAkta || row.wajib_akta || 0);
+            const sudah = Number(row.aktaAda || row.akta_ada || 0);
+            const belum = Number(row.aktaTidak || row.akta_tidak || 0);
+            const pct = getPercentage(wajib, sudah).toFixed(2).replace('.', ',');
+            
+            return `
+                <tr>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-700">${i+1}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">${row.namaWilayah || row.nama_wilayah || '-'}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-right text-blue-900">${wajib.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-right text-emerald-600">${sudah.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-right text-red-600">${belum.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-right text-blue-600">${pct}%</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Add event listeners for sorting
+    document.getElementById('sortWajibBtn').addEventListener('click', () => toggleSort('wajib'));
+    document.getElementById('sortSudahBtn').addEventListener('click', () => toggleSort('sudah'));
+    document.getElementById('sortBelumBtn').addEventListener('click', () => toggleSort('belum'));
+    document.getElementById('sortPercentBtn').addEventListener('click', () => toggleSort('percent'));
+
+    // Modify the main flow to store rows globally and call renderTable
+    let rows = [];
+
+    // In your main flow, update this part:
+    (async function() {
+        rows = await fetchSheetsData();
+        if (!rows || rows.length === 0) {
+            initChart(['Tidak ada data'], [0], [0], [0]);
+            renderTable();
+            return;
+        }
+
+        const labels = [];
+        const wajibArr = [];
+        const sudahArr = [];
+        const belumArr = [];
+
+        rows.forEach(r => {
+            const name = r.namaWilayah || r.nama_wilayah || r.name || '-';
+            labels.push(name);
+            const n = v => { const x = Number(v); return isNaN(x) ? 0 : x; };
+            wajibArr.push(n(r.wajibAkta || r.wajib_akta));
+            sudahArr.push(n(r.aktaAda || r.akta_ada));
+            belumArr.push(n(r.aktaTidak || r.akta_tidak));
+        });
+
+        initChart(labels, wajibArr, sudahArr, belumArr);
+        renderTable();
+    })();
+    </script>
+</body>
+</html>
