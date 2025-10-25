@@ -18,6 +18,8 @@
         @keyframes spin { to{transform:rotate(360deg)} }
         /* make chart container horizontally scrollable for many regions */
         .chart-scroll { overflow-x:auto; padding-bottom:12px; }
+        .sort-btn { display:inline-flex; align-items:center; gap:.375rem; color:inherit; font-weight:600; background:none; border:0; cursor:pointer; padding:0; }
+        .sort-icon { font-size:12px; color:#6b7280; width:18px; text-align:center; display:inline-block; }
     </style>
 </head>
 
@@ -43,21 +45,19 @@
         <div id="dashboardView" class="fade-in">
             <div class="flex items-center justify-between mb-6">
                 <h1 class="text-2xl font-semibold text-gray-800">Perbandingan Penduduk Laki-laki vs Perempuan per Wilayah</h1>
-                <div class="flex items-center space-x-2">
-                    <button id="refreshBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Refresh</button>
-                    <button id="testConnBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">Test Koneksi</button>
-                </div>
             </div>
 
             <!-- Summary cards (simple) -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <!-- Change this card -->
                 <div class="bg-white rounded-xl p-4 card-hover shadow">
-                    <p class="text-sm text-gray-500">Total Wilayah</p>
-                    <p id="countRegions" class="text-2xl font-bold text-gray-800">-</p>
+                    <p class="text-sm text-gray-500">Total Penduduk</p>
+                    <p id="countTotal" class="text-2xl font-bold text-gray-800">-</p>
                 </div>
+                <!-- Keep these cards -->
                 <div class="bg-white rounded-xl p-4 card-hover shadow">
                     <p class="text-sm text-gray-500">Total Penduduk (Laki)</p>
-                    <p id="totalMale" class="text-2xl font-bold text-green-600">-</p>
+                    <p id="totalMale" class="text-2xl font-bold" style="color:#035cb6;">-</p>
                 </div>
                 <div class="bg-white rounded-xl p-4 card-hover shadow">
                     <p class="text-sm text-gray-500">Total Penduduk (Perempuan)</p>
@@ -67,13 +67,13 @@
 
             <!-- Bar chart -->
             <div class="bg-white rounded-xl shadow p-6 mb-6">
-                <h3 class="text-lg font-medium text-gray-700 mb-4">Bar Chart: Laki-laki vs Perempuan (per Wilayah)</h3>
+                <h3 class="text-lg font-medium text-gray-700 mb-4">Laki-laki vs Perempuan (per Wilayah)</h3>
                 <div class="chart-scroll">
                     <div style="min-width:800px; height:420px;">
                         <canvas id="maleFemaleBarChart"></canvas>
                     </div>
                 </div>
-                <p id="chartNote" class="text-sm text-gray-500 mt-3">Sumbu X: Nama Wilayah — Sumbu Y: Jumlah Penduduk</p>
+                
             </div>
 
             <!-- Raw table (compact) -->
@@ -81,15 +81,31 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wilayah</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Laki-laki</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Perempuan</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">No.</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 ">Wilayah</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                                <button id="sortMaleBtn" class="sort-btn" title="Klik untuk urutkan berdasarkan Laki-laki">
+                                    <span>Laki-laki</span>
+                                    <span id="sortMaleIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 ">
+                                <button id="sortFemaleBtn" class="sort-btn" title="Klik untuk urutkan berdasarkan Perempuan">
+                                    <span>Perempuan</span>
+                                    <span id="sortFemaleIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 ">
+                                <button id="sortTotalBtn" class="sort-btn" title="Klik untuk urutkan berdasarkan Total">
+                                    <span>Total</span>
+                                    <span id="sortTotalIcon" class="sort-icon">⇅</span>
+                                </button>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="regionsTable" class="bg-white divide-y divide-gray-200">
                         <tr>
-                            <td colspan="4" class="px-4 py-6 text-center text-gray-500">
+                            <td colspan="5" class="px-4 py-6 text-center text-gray-500">
                                 <span class="loading"></span>
                                 <div class="mt-2">Memuat data...</div>
                             </td>
@@ -110,6 +126,8 @@
 
     let populationData = []; // array of objects {id, namaWilayah, pendudukLaki, pendudukPerempuan, ...}
     let barChart = null;
+    // sort state: key = 'male'|'female'|null, asc = true/false
+    let sortState = { key: null, asc: true };
 
     // helper for connection status
     function setConnectionStatus(ok, text) {
@@ -141,13 +159,61 @@
         }
     }
 
+    // small helpers
+    function getMaleCount(row) { return Number(row.pendudukLaki || row.laki || row.male || 0); }
+    function getFemaleCount(row) { return Number(row.pendudukPerempuan || row.perempuan || row.female || 0); }
+    // Add getTotalCount helper function
+    function getTotalCount(row) { 
+        return getMaleCount(row) + getFemaleCount(row); 
+    }
+
+    // apply current sortState to populationData (in-place)
+    function applySort() {
+        if (!sortState.key) return;
+        const keyFn = {
+            'male': getMaleCount,
+            'female': getFemaleCount,
+            'total': getTotalCount
+        }[sortState.key];
+        if (keyFn) {
+            populationData.sort((a,b) => sortState.asc ? keyFn(a) - keyFn(b) : keyFn(b) - keyFn(a));
+        }
+    }
+
+    // toggle sort by column ('male' or 'female')
+    function toggleSortBy(column) {
+        if (sortState.key === column) {
+            sortState.asc = !sortState.asc;
+        } else {
+            sortState.key = column;
+            sortState.asc = false; // default to descending (terbanyak) on first click
+        }
+        // update icons
+        const maleIcon = document.getElementById('sortMaleIcon');
+        const femaleIcon = document.getElementById('sortFemaleIcon');
+        const totalIcon = document.getElementById('sortTotalIcon');
+        maleIcon.textContent = '⇅';
+        femaleIcon.textContent = '⇅';
+        totalIcon.textContent = '⇅';
+        if (sortState.key === 'male') maleIcon.textContent = sortState.asc ? '▲' : '▼';
+        if (sortState.key === 'female') femaleIcon.textContent = sortState.asc ? '▲' : '▼';
+        if (sortState.key === 'total') totalIcon.textContent = sortState.asc ? '▲' : '▼';
+
+        applySort();
+        renderTable();
+        renderSummary();
+        renderBarChart();
+    }
+
     // load data (read)
     async function loadData() {
         try {
-            document.getElementById('regionsTable').innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500"><span class="loading"></span><div class="mt-2">Memuat data...</div></td></tr>`;
+            document.getElementById('regionsTable').innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500"><span class="loading"></span><div class="mt-2">Memuat data...</div></td></tr>`;
             const res = await apiRequest('read');
             if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Tidak ada response success dari script');
             populationData = Array.isArray(res.data) ? res.data : [];
+            // re-apply sort if set
+            applySort();
             renderTable();
             renderSummary();
             renderBarChart();
@@ -155,7 +221,7 @@
         } catch (err) {
             console.error(err);
             populationData = [];
-            document.getElementById('regionsTable').innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">⚠️ Tidak dapat memuat data: ${err.message}</td></tr>`;
+            document.getElementById('regionsTable').innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">⚠️ Tidak dapat memuat data: ${err.message}</td></tr>`;
             setConnectionStatus(false, err.message);
         }
     }
@@ -164,20 +230,22 @@
     function renderTable() {
         const tbody = document.getElementById('regionsTable');
         if (!populationData || populationData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">Tidak ada data</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Tidak ada data</td></tr>`;
             return;
         }
         tbody.innerHTML = '';
         populationData.forEach((row, i) => {
             const nama = row.namaWilayah || row.nama || row.wilayah || '-';
-            const laki = Number(row.pendudukLaki || row.laki || row.male || 0);
-            const perempuan = Number(row.pendudukPerempuan || row.perempuan || row.female || 0);
+            const laki = getMaleCount(row);
+            const perempuan = getFemaleCount(row);
+            const total = laki + perempuan; // NEW: total population
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="px-4 py-3 text-sm text-gray-700">${i+1}</td>
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${escapeHtml(nama)}</td>
-                <td class="px-4 py-3 text-sm text-right text-green-600">${laki.toLocaleString()}</td>
-                <td class="px-4 py-3 text-sm text-right text-pink-600">${perempuan.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm font-medium text-right text-green-600" style="color:#035cb6;">${laki.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm font-medium text-right text-pink-600">${perempuan.toLocaleString()}</td>
+                <td class="px-4 py-3 text-sm font-medium text-right text-gray-800 font-semibold">${total.toLocaleString()}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -185,13 +253,13 @@
 
     // render summary cards
     function renderSummary() {
-        const totalRegions = populationData.length;
         let totalMale = 0, totalFemale = 0;
         populationData.forEach(r => {
-            totalMale += Number(r.pendudukLaki || r.laki || r.male || 0);
-            totalFemale += Number(r.pendudukPerempuan || r.perempuan || r.female || 0);
+            totalMale += getMaleCount(r);
+            totalFemale += getFemaleCount(r);
         });
-        document.getElementById('countRegions').textContent = totalRegions;
+        // Update the total population card
+        document.getElementById('countTotal').textContent = (totalMale + totalFemale).toLocaleString();
         document.getElementById('totalMale').textContent = totalMale.toLocaleString();
         document.getElementById('totalFemale').textContent = totalFemale.toLocaleString();
     }
@@ -200,8 +268,8 @@
     function renderBarChart() {
         const ctx = document.getElementById('maleFemaleBarChart').getContext('2d');
         const labels = populationData.map(r => r.namaWilayah || r.nama || r.wilayah || '-');
-        const males = populationData.map(r => Number(r.pendudukLaki || r.laki || r.male || 0));
-        const females = populationData.map(r => Number(r.pendudukPerempuan || r.perempuan || r.female || 0));
+        const males = populationData.map(r => getMaleCount(r));
+        const females = populationData.map(r => getFemaleCount(r));
 
         // destroy previous chart
         if (barChart) {
@@ -222,7 +290,7 @@
                     {
                         label: 'Laki-laki',
                         data: males,
-                        backgroundColor: '#16a34a',
+                        backgroundColor: '#035cb6', // Changed to navy blue
                         borderRadius: 4
                     },
                     {
@@ -284,8 +352,12 @@
     }
 
     // events
-    document.getElementById('refreshBtn').addEventListener('click', loadData);
-    document.getElementById('testConnBtn').addEventListener('click', testConnection);
+    // document.getElementById('refreshBtn').addEventListener('click', loadData);
+    // document.getElementById('testConnBtn').addEventListener('click', testConnection);
+    
+    document.getElementById('sortMaleBtn').addEventListener('click', () => toggleSortBy('male'));
+    document.getElementById('sortFemaleBtn').addEventListener('click', () => toggleSortBy('female'));
+    document.getElementById('sortTotalBtn').addEventListener('click', () => toggleSortBy('total'));
 
     // init on DOM ready
     document.addEventListener('DOMContentLoaded', () => {
