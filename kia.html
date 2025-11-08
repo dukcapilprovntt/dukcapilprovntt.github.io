@@ -237,8 +237,8 @@
         data: {
           labels,
           datasets: [
-            { label: 'Wajib KIA',    data: wajibArr,  backgroundColor: '#1e40af', borderRadius: 4 }, // navy
-            { label: 'Memiliki KIA', data: adaArr,    backgroundColor: '#16a34a', borderRadius: 4 }, // green
+            { label: 'Wajib KIA',    data: wajibArr,  backgroundColor: '#1e3a8a', borderRadius: 4 }, // navy
+            { label: 'Memiliki KIA', data: adaArr,    backgroundColor: '#059669', borderRadius: 4 }, // green (match KTP-el)
             { label: 'Belum KIA',    data: belumArr,  backgroundColor: '#dc2626', borderRadius: 4 }  // red
           ]
         },
@@ -249,39 +249,22 @@
           plugins: {
             legend: { position: 'top' },
             tooltip: {
-              mode: 'index',
-              intersect: false,
               callbacks: {
-                label: function(ctx) {
-                  const value = Number(ctx.raw) || 0;
-                  const formatted = value.toLocaleString();
-                  // show percentage for "Memiliki" and "Belum" relative to "Wajib"
-                  if (ctx.datasetIndex > 0) {
+                label: ctx => {
+                  const value = Number(ctx.raw).toLocaleString();
+                  // show percentage only for "Memiliki KIA" (datasetIndex === 1), like perekamanKTPel
+                  if (ctx.datasetIndex === 1) {
                     const wajib = wajibArr[ctx.dataIndex] || 0;
-                    const pct = wajib ? ((value / wajib) * 100).toFixed(2).replace('.', ',') + '%' : '0,00%';
-                    return `${ctx.dataset.label}: ${formatted} (${pct})`;
+                    const pct = wajib ? ((ctx.raw / wajib) * 100).toFixed(2).replace('.', ',') + '%' : '0,00%';
+                    return `${ctx.dataset.label}: ${value} (${pct})`;
                   }
-                  return `${ctx.dataset.label}: ${formatted}`;
+                  return `${ctx.dataset.label}: ${value}`;
                 }
               }
             },
+            // match perekamanKTPel: hide datalabels on bars
             datalabels: {
-              color: '#111827',
-              anchor: 'end',
-              align: 'end',
-              formatter: function(value, ctx) {
-                const idx = ctx.dataIndex;
-                const dsIdx = ctx.datasetIndex;
-                const wajib = wajibArr[idx] || 0;
-                if (wajib <= 0) return '';
-                // show percentage for Memiliki / Belum, raw number for Wajib
-                if (dsIdx > 0) {
-                  return ((value / wajib) * 100).toFixed(2).replace('.', ',') + '%';
-                }
-                return value.toLocaleString();
-              },
-              font: { weight: '600', size: 11 },
-              padding: 4
+              display: false
             }
           },
           scales: {

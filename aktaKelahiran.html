@@ -136,89 +136,44 @@
             data: {
                 labels: labels,
                 datasets: [
-                    {
-                        label: 'Wajib Akta Kelahiran 0-4 Tahun',
-                        data: wajibArr,
-                        backgroundColor: '#1e40af', // biru navy
-                    },
-                    {
-                        label: 'Memiliki Akta Kelahiran 0-4 Tahun',
-                        data: sudahArr,
-                        backgroundColor: '#16a34a', // hijau
-                    },
-                    {
-                        label: 'Belum Akta Kelahiran 0-4 Tahun',
-                        data: belumArr,
-                        backgroundColor: '#dc2626', // merah
-                    }
+                    { label: 'Wajib Akta Kelahiran 0-4 Tahun', data: wajibArr,  backgroundColor: '#1e3a8a', borderRadius: 4 },
+                    { label: 'Memiliki Akta Kelahiran 0-4 Tahun', data: sudahArr, backgroundColor: '#059669', borderRadius: 4 },
+                    { label: 'Belum Akta Kelahiran 0-4 Tahun',    data: belumArr, backgroundColor: '#dc2626', borderRadius: 4 }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { position: 'top' },
-                    tooltip: { 
-                        mode: 'index',
-                        intersect: false,
+                    tooltip: {
                         callbacks: {
                             label: function(ctx) {
-                                const value = ctx.raw || 0;
-                                const wajib = wajibArr[ctx.dataIndex] || 0;
-                                let text = `${ctx.dataset.label}: ${value.toLocaleString()}`;
-                                
-                                // Add percentage for "Sudah" and "Belum"
-                                if (ctx.datasetIndex > 0 && wajib > 0) {
-                                    const percentage = ((value / wajib) * 100).toFixed(2).replace('.', ',');
-                                    text += ` (${percentage}%)`;
+                                const value = Number(ctx.raw) || 0;
+                                const formatted = value.toLocaleString();
+                                // show percentage for "Memiliki" (datasetIndex === 1)
+                                if (ctx.datasetIndex === 1) {
+                                    const wajib = wajibArr[ctx.dataIndex] || 0;
+                                    const pct = wajib ? ((value / wajib) * 100).toFixed(2).replace('.', ',') + '%' : '0,00%';
+                                    return `${ctx.dataset.label}: ${formatted} (${pct})`;
                                 }
-                                
-                                return text;
+                                return `${ctx.dataset.label}: ${formatted}`;
                             }
                         }
                     },
-                    datalabels: {
-                        color: '#111827',
-                        anchor: 'end',
-                        align: 'end',
-                        formatter: function(value, ctx) {
-                            const idx = ctx.dataIndex;
-                            const datasetIdx = ctx.datasetIndex;
-                            const wajib = wajibArr[idx] || 0;
-                            
-                            if (wajib <= 0) return '';
-                            
-                            // Show percentage only for "Sudah" and "Belum"
-                            if (datasetIdx > 0) {
-                                const pct = ((value / wajib) * 100).toFixed(2).replace('.', ',');
-                                return pct + '%';
-                            }
-                            
-                            return value.toLocaleString();
-                        },
-                        font: { weight: '600', size: 11 },
-                        padding: 4
-                    }
+                    datalabels: { display: false }
                 },
                 scales: {
                     x: {
-                        ticks: {
-                            maxRotation: 45,
-                            minRotation: 45
-                        },
+                        ticks: { maxRotation: 45, minRotation: 45 },
                         title: { display: true, text: 'Wilayah' }
                     },
                     y: {
                         beginAtZero: true,
                         title: { display: true, text: 'Jumlah' },
-                        ticks: {
-                            callback: value => value.toLocaleString()
-                        }
+                        ticks: { callback: v => Number(v).toLocaleString() }
                     }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
                 }
             }
         });
