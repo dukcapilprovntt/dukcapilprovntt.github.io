@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <style>
         body { box-sizing: border-box; }
@@ -46,8 +47,12 @@
 
     <!-- Main Content -->
     <main class="max-w-6xl mx-auto px-4 py-8">
+        <h1 class="col-span-full text-xl font-semibold text-gray-800 text-center mb-4" id="tableTitle">
+                    Akta Kelahiran 0-4 Tahun Keadaan
+                    <span id="lastMonthDate"></span>
+            </h1>
         <div class="bg-white rounded-xl shadow-md p-6">
-            <h3 class="text-lg font-semibold text-gray-700 mb-4">Perbandingan Akta Kelahiran 0-4 Tahun per Wilayah</h3>
+            
             <div class="relative h-[600px]">
                 <canvas id="aktaBarChart"></canvas>
             </div>            
@@ -55,6 +60,9 @@
 
         <!-- Add this after the chart div and before the closing main tag -->
         <div class="bg-white rounded-xl shadow-md p-6 mt-6">
+            <div class="flex justify-end p-4">
+                <button id="downloadAktaBtn" class="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm">Download Excel</button>
+            </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -264,11 +272,50 @@
         }).join('');
     }
 
+    // export helper (SheetJS)
+    function exportTableToXLSX(tbodyId, filename = 'data.xlsx') {
+      const tb = document.getElementById(tbodyId);
+      if (!tb) return alert('Tabel tidak ditemukan: ' + tbodyId);
+      const table = tb.closest('table') || tb;
+      try {
+        const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+        wb.Props = { Title: filename.replace(/\.[^.]+$/, ''), CreatedDate: new Date() };
+        XLSX.writeFile(wb, filename);
+      } catch (err) {
+        console.error('Export error', err);
+        alert('Gagal mengekspor tabel: ' + err.message);
+      }
+    }
+    
+    function getLastMonthDate() {
+            const now = new Date();
+            // buat tanggal dengan hari = 0 → hasilnya tanggal terakhir dari bulan sebelumnya
+            const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+            // format tanggal ke "DD NamaBulan YYYY" (contoh: "30 September 2025")
+            const months = [
+                "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+            ];
+
+            const day = lastDayPrevMonth.getDate();
+            const month = months[lastDayPrevMonth.getMonth()];
+            const year = lastDayPrevMonth.getFullYear();
+
+            return `${day} ${month} ${year}`;
+        }
+
     // Add event listeners for sorting
     document.getElementById('sortWajibBtn').addEventListener('click', () => toggleSort('wajib'));
     document.getElementById('sortSudahBtn').addEventListener('click', () => toggleSort('sudah'));
     document.getElementById('sortBelumBtn').addEventListener('click', () => toggleSort('belum'));
     document.getElementById('sortPercentBtn').addEventListener('click', () => toggleSort('percent'));
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('downloadAktaBtn');
+      document.getElementById('lastMonthDate').textContent = getLastMonthDate();
+      if (btn) btn.addEventListener('click', () => exportTableToXLSX('dataTable', 'akta_kelahiran.xlsx'));
+    });
 
     // Modify the main flow to store rows globally and call renderTable
     let rows = [];

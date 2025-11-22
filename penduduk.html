@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <style>
         body { box-sizing: border-box; }
@@ -54,9 +55,11 @@
     <!-- Main (modified per request) -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div id="dashboardView" class="fade-in">
-            <div class="flex items-center justify-between mb-6">
-                <h1 class="text-2xl font-semibold text-gray-800">Perbandingan Penduduk Laki-laki vs Perempuan per Wilayah</h1>
-            </div>
+            
+            <h1 class="col-span-full text-xl font-semibold text-gray-800 text-center mb-4" id="tableTitle">
+                    Perbandingan Penduduk Laki-laki vs Perempuan Keadaan
+                    <span id="lastMonthDate"></span>
+            </h1>
 
             <!-- Summary cards (simple) -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -89,6 +92,11 @@
 
             <!-- Raw table (compact) -->
             <div class="bg-white rounded-xl shadow overflow-x-auto">
+                <div class="flex justify-end p-4">
+                    <button id="downloadPendudukBtn" class="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm">
+                        Download Excel
+                    </button>
+                </div>
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -362,22 +370,59 @@
         return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
+    // export table (closest table of tbodyId) to real .xlsx using SheetJS
+    function exportTableToXLSX(tbodyId, filename = 'data.xlsx') {
+        const tb = document.getElementById(tbodyId);
+        if (!tb) return alert('Tabel tidak ditemukan: ' + tbodyId);
+        const table = tb.closest('table') || tb;
+        try {
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+            wb.Props = { Title: filename.replace(/\.[^.]+$/, ''), CreatedDate: new Date() };
+            XLSX.writeFile(wb, filename);
+        } catch (err) {
+            console.error('Export error', err);
+            alert('Gagal mengekspor tabel: ' + err.message);
+        }
+    }
+    // get last month date in "DD NamaBulan YYYY" format
+    function getLastMonthDate() {
+            const now = new Date();
+            // buat tanggal dengan hari = 0 → hasilnya tanggal terakhir dari bulan sebelumnya
+            const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+            // format tanggal ke "DD NamaBulan YYYY" (contoh: "30 September 2025")
+            const months = [
+                "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+            ];
+
+            const day = lastDayPrevMonth.getDate();
+            const month = months[lastDayPrevMonth.getMonth()];
+            const year = lastDayPrevMonth.getFullYear();
+
+            return `${day} ${month} ${year}`;
+        }
+
     // events
     // document.getElementById('refreshBtn').addEventListener('click', loadData);
     // document.getElementById('testConnBtn').addEventListener('click', testConnection);
-    
-    document.getElementById('sortMaleBtn').addEventListener('click', () => toggleSortBy('male'));
-    document.getElementById('sortFemaleBtn').addEventListener('click', () => toggleSortBy('female'));
-    document.getElementById('sortTotalBtn').addEventListener('click', () => toggleSortBy('total'));
-
-    // init on DOM ready
+     
+     document.getElementById('sortMaleBtn').addEventListener('click', () => toggleSortBy('male'));
+     document.getElementById('sortFemaleBtn').addEventListener('click', () => toggleSortBy('female'));
+     document.getElementById('sortTotalBtn').addEventListener('click', () => toggleSortBy('total'));
+ 
+     // init on DOM ready
     document.addEventListener('DOMContentLoaded', () => {
-        // initialize empty chart so layout reserves space (optional)
-        const ctx = document.getElementById('maleFemaleBarChart').getContext('2d');
-        barChart = new Chart(ctx, { type:'bar', data:{labels:[], datasets:[]}, options:{responsive:true, maintainAspectRatio:false} });
-        // load data
-        testConnection().then(ok => { if (ok) loadData(); else loadData(); });
-    });
+     // initialize empty chart so layout reserves space (optional)
+     const ctx = document.getElementById('maleFemaleBarChart').getContext('2d');
+     document.getElementById('lastMonthDate').textContent = getLastMonthDate();
+     barChart = new Chart(ctx, { type:'bar', data:{labels:[], datasets:[]}, options:{responsive:true, maintainAspectRatio:false} });
+     // load data
+     testConnection().then(ok => { if (ok) loadData(); else loadData(); });
+    // attach download button
+    const dl = document.getElementById('downloadPendudukBtn');
+    if (dl) dl.addEventListener('click', () => exportTableToXLSX('regionsTable', 'penduduk.xlsx'));
+ });
     </script>
 </body>
 </html>

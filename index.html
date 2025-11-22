@@ -116,7 +116,11 @@
             </div>
 
             <!-- BOTTOM: kartu lainnya -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+            <div class="bg-blue-100 p-4 rounded-xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                 <h3 class="col-span-full text-xl font-semibold text-gray-800 text-center mb-4" id="tableTitle">
+                    Data Kependudukan Provinsi Nusa Tenggara Timur Keadaan 
+                    <span id="lastMonthDate"></span>
+                </h3>
                 <a href="perekamanKTPel.html" class="block">
                     <!-- Wajib Perekaman KTP-el -->
                     <div class="bg-white rounded-xl shadow-md p-6 card-hover">
@@ -325,16 +329,9 @@
                             </svg>
                         </div>
                     </div>
-                </div>
+                </div>    
                 
-                
-                
-                
-                
-            </div>
-            
-
-            <!-- Connection Status -->
+                <!-- Connection Status -->
             <div id="connectionStatus" class="mb-6 p-4 rounded-lg border hidden">
                 <div class="flex items-center space-x-2">
                     <div id="statusIcon"></div>
@@ -355,9 +352,9 @@
             </div>
 
             <!-- Data Wilayah Table -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="col-span-full bg-white rounded-xl shadow-md overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 class="text-xl font-semibold text-gray-800" id="tableTitle">Tabel Rekapitulasi Kependudukan Provinsi Nusa Tenggara Timur Keadaan <span id="lastMonthDate"></span></h3>
+                    <h3 class="text-xl font-semibold text-center text-gray-800" id="tableTitle">Tabel Rekapitulasi Kependudukan per wilayah di Provinsi Nusa Tenggara Timur Keadaan <span id="lastMonthDate2"></span></h3>
                     <div id="adminControls" class="hidden flex space-x-2">
                         <button id="testConnection" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,13 +397,18 @@
                             <tr>
                                 <td colspan="8" class="px-6 py-4 text-center text-gray-500">
                                     <div class="loading mx-auto"></div>
-                                    <p class="mt-2">Memuat data dari Google Sheets...</p>
+                                    <p class="mt-2">Memuat data...</p>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+            </div>
+            
+
+            
+            
         </div>
 
         <!-- Admin Management View -->
@@ -577,7 +579,7 @@
                         console.log('✅ JSON parsed successfully:', jsonResponse);
                         
                         if (jsonResponse.success) {
-                            showConnectionStatus(true, 'Koneksi berhasil! Google Apps Script aktif');
+                            
                             return true;
                         } else {
                             showConnectionStatus(false, 'Google Apps Script merespons tapi ada error: ' + jsonResponse.message);
@@ -693,7 +695,7 @@
                     populationData = result.data || [];
                     renderSheetsDataTable();
                     updateStats();
-                    showConnectionStatus(true, `Data berhasil dimuat (${populationData.length} records)`);
+                    
                 } else {
                     showError('Gagal memuat data: ' + (result.message || 'Unknown error'));
                     showConnectionStatus(false, result.message || 'Unknown error');
@@ -1227,21 +1229,39 @@
 
         // Dapatkan tanggal terakhir dari bulan sebelumnya
         function getLastMonthDate() {
-        const now = new Date();
-        // buat tanggal dengan hari = 0 → hasilnya tanggal terakhir dari bulan sebelumnya
-        const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            const now = new Date();
+            // buat tanggal dengan hari = 0 → hasilnya tanggal terakhir dari bulan sebelumnya
+            const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-        // format tanggal ke "DD NamaBulan YYYY" (contoh: "30 September 2025")
-        const months = [
-            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-        ];
+            // format tanggal ke "DD NamaBulan YYYY" (contoh: "30 September 2025")
+            const months = [
+                "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+            ];
 
-        const day = lastDayPrevMonth.getDate();
-        const month = months[lastDayPrevMonth.getMonth()];
-        const year = lastDayPrevMonth.getFullYear();
+            const day = lastDayPrevMonth.getDate();
+            const month = months[lastDayPrevMonth.getMonth()];
+            const year = lastDayPrevMonth.getFullYear();
 
-        return `${day} ${month} ${year}`;
+            return `${day} ${month} ${year}`;
+        }
+
+        function getLastMonthDate2() {
+            const now = new Date();
+            // buat tanggal dengan hari = 0 → hasilnya tanggal terakhir dari bulan sebelumnya
+            const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+            // format tanggal ke "DD NamaBulan YYYY" (contoh: "30 September 2025")
+            const months = [
+                "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+            ];
+
+            const day = lastDayPrevMonth.getDate();
+            const month = months[lastDayPrevMonth.getMonth()];
+            const year = lastDayPrevMonth.getFullYear();
+
+            return `${day} ${month} ${year}`;
         }
 
 
@@ -1256,7 +1276,7 @@
             
             // Set last month date in table title
             document.getElementById('lastMonthDate').textContent = getLastMonthDate();
-            
+            document.getElementById('lastMonthDate2').textContent = getLastMonthDate2();
             // Load data immediately for public view
             testConnection().then(success => {
                 if (success) {
