@@ -1304,20 +1304,7 @@
     });
   }
 
-  function aggregateByMinggu(filtered){
-    const map = new Map();
-    filtered.forEach(row => {
-      const k = row.minggu != null ? String(row.minggu) : "0";
-      const v = Number(row.jumlahPenambahan) || 0;
-      map.set(k, (map.get(k)||0) + v);
-    });
-    const keys = Array.from(map.keys()).sort((a,b)=>{
-      const na=Number(a), nb=Number(b);
-      if(!isNaN(na) && !isNaN(nb)) return na-nb;
-      return a.localeCompare(b);
-    });
-    return { labels: keys, values: keys.map(k => map.get(k)) };
-  }
+  
 
   function renderLine(labels, values, labelName){
     if(lineChart) lineChart.destroy();
